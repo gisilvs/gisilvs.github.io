@@ -18,19 +18,6 @@ org_name: ''
 description: ''
 twitter: ''
 
-# Contact (edit or remove options as required)
-
-email: gianlu.silvestri@gmail.com
-contact_links:
-  - icon: twitter
-    icon_pack: fab
-    name: DM Me
-    link: 'https://twitter.com/gisilvs'
-  - icon: linkedin
-    icon_pack: fab
-    name: Skype Me
-    link: 'skype:echo123?call'
-
 # Site header
 
 main_menu:
