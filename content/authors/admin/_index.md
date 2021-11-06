@@ -55,5 +55,3 @@ highlight_name: false
 ---
 
 I am a PhD student in Machine Learning at OnePlanet Research Center and Donders Institute for Brain, Cognition and Behaviour. My research interests include Variational Inference, Normalizing Flows and Reinforcement Learning.
-
-# {{< icon name="download" pack="fas" >}} Download my {{< staticref "media/demo_resume.pdf" "newtab" >}}resumé{{< /staticref >}}.
