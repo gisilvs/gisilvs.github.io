@@ -84,7 +84,7 @@ breadcrumb:
   page_types:
     book: true
 comments:
-  provider: 'disqus'
+  provider: ''
   commentable:
     post: true
     book: true
