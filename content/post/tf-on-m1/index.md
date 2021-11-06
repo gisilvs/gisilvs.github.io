@@ -1,7 +1,7 @@
 ---
 # Documentation: https://wowchemy.com/docs/managing-content/
 
-title: "Tf on M1"
+title: "How to install the latest versions of TensorFlow and TensorFlow Probability on Mac M1 Pro with Rosetta"
 subtitle: ""
 summary: ""
 authors: []
