@@ -92,7 +92,7 @@ comments:
     publication: true
     event: true
   disqus:
-    shortname: 'gisilvs'
+    shortname: 'the-unconscious-statistician'
     show_count: true
   commento:
     url: ''
