@@ -5,12 +5,88 @@
     <link>https://www.theunconsciousstatistician.com/post/</link>
       <atom:link href="https://www.theunconsciousstatistician.com/post/index.xml" rel="self" type="application/rss+xml" />
     <description>Posts</description>
-    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sun, 13 Dec 2020 00:00:00 +0000</lastBuildDate>
+    <generator>Wowchemy (https://wowchemy.com)</generator><language>en-us</language><lastBuildDate>Sat, 06 Nov 2021 17:10:48 +0100</lastBuildDate>
     <image>
       <url>https://www.theunconsciousstatistician.com/media/icon_hu5e71b6bd4b277cfc8175c1349cc66ed0_36502_512x512_fill_lanczos_center_3.png</url>
       <title>Posts</title>
       <link>https://www.theunconsciousstatistician.com/post/</link>
     </image>
+    
+    <item>
+      <title>How to install TensorFlow and TensorFlow Probability (nightly) on Mac M1 Pro with Rosetta</title>
+      <link>https://www.theunconsciousstatistician.com/post/tf-on-m1/</link>
+      <pubDate>Sat, 06 Nov 2021 17:10:48 +0100</pubDate>
+      <guid>https://www.theunconsciousstatistician.com/post/tf-on-m1/</guid>
+      <description>&lt;h2 id=&#34;introduction&#34;&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;If like me you recently upgraded to the latest MacBook Pro with M1 chip and use the nightly version of TensorFlow (TF) and TensorFlow Probability (TFP) in most of your research projects, then you&amp;rsquo;ll probably find this page useful. I initially followed the &lt;a href=&#34;https://developer.apple.com/metal/tensorflow-plugin/&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;Apple&amp;rsquo;s tutorial&lt;/a&gt; to install TF 2.6 on M1, which worked smoothly and allows you to use M1&amp;rsquo;s GPU. I could also install TFP with conda, but could not get the latest version which led to some conflicts. I quickly had to give up on using TF and TFP for M1 (if you figure out a way, please let me know!!).
+A different strategy is to install python libraries for x86 using Rosetta 2. While this can be done easily for most python packages, it turned out to be quite tricky for TF and TFP. In fact, you can&amp;rsquo;t just &lt;code&gt;pip install tf-nightly tfp-nightly&lt;/code&gt;, as Rosetta 2 does not support the AVX instruction set.
+In this post, I will guide you thorugh the procedure I used to get both &lt;code&gt;tf-nightly&lt;/code&gt; and &lt;code&gt;tfp-nightly&lt;/code&gt; to work on the M1 chip with Rosetta 2. Let&amp;rsquo;s start!&lt;/p&gt;
+&lt;h2 id=&#34;preliminaries&#34;&gt;Preliminaries&lt;/h2&gt;
+&lt;p&gt;Before we start, you need to change the way the Terminal app is open, and set it to be with Rosetta. To do so, in &lt;code&gt;Applications/Utilities&lt;/code&gt;, right click on Terminal, then Get Info, and check the box &amp;lsquo;Open using Rosetta&amp;rsquo;. Make sure to close and reopen the terminal.&lt;/p&gt;
+&lt;p&gt;As first step, you need the Xcode Command Line Tools installed. You can do this by running:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;xcode-select --install
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then, we need homebrew for x86. Simply install homebrew:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;/bin/bash -c &amp;quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and then rename it by copying the following line in the file &lt;code&gt;.zshrc&lt;/code&gt; :&lt;code&gt;alias brow=&#39;/usr/local/bin/brew&#39;&lt;/code&gt;. In this way, you can use M1  &lt;code&gt;brew&lt;/code&gt; and x86 brew translated with Rosetta &lt;code&gt;brow&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Next step, we need to install miniconda and create an environment. Start with:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;brow install --cask miniconda
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then, you need to run &lt;code&gt;conda init&lt;/code&gt;. if you have previously installed miniforge, you need to remove from the file &lt;code&gt;.bash_profile&lt;/code&gt; everything between (and including):&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# &amp;gt;&amp;gt;&amp;gt; conda initialize &amp;gt;&amp;gt;&amp;gt;
+...
+# &amp;lt;&amp;lt;&amp;lt; conda initialize &amp;lt;&amp;lt;&amp;lt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and then run &lt;code&gt;conda init&lt;/code&gt; again.&lt;/p&gt;
+&lt;p&gt;Now, type &lt;code&gt;source activate .bash_profile&lt;/code&gt;, and then &lt;code&gt;conda create -n env_name python=3.9&lt;/code&gt;. After the environment is created, type &lt;code&gt;conda activate env_name&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;As last part of the preliminaries, we need to install &lt;code&gt;bazel&lt;/code&gt;, which will allow us to compile TF from source. I actually followed a different route here, but do not know whether that&amp;rsquo;s necessary or if simply installyng &lt;code&gt;bazel&lt;/code&gt; with homebrew would be enough. What I did is explained &lt;a href=&#34;https://github.com/tensorflow/tensorflow/issues/46044#issuecomment-801349383&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;here&lt;/a&gt;, and consists of:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;brow install zlib
+brow install bzip2
+brow install sqlite
+brow install libiconv
+brow install libzip
+brow install xz
+brow install bazelisk
+brow install gnu-sed
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;install-tensorflow&#34;&gt;Install TensorFlow&lt;/h2&gt;
+&lt;p&gt;For this part, I mostly followed the &lt;a href=&#34;https://www.tensorflow.org/install/source&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;instructions to build from source&lt;/a&gt; with some minor modifications. Making sure that you are in the conda environment previously created (env_name in our example), type:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;pip install -U pip numpy wheel
+pip install -U keras_preprocessing --no-deps
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then, clone the TF git repo:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;git clone https://github.com/tensorflow/tensorflow.git
+cd tensorflow
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If you need a specific version of tensorflow, for example 2.7, you can type &lt;code&gt;git checkout r2.7&lt;/code&gt;. However, here I will show how to install the latest (nightly) version. To start the build, type:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;./configure
+bazel build //tensorflow/tools/pip_package:build_pip_package
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This will take at least a couple of hours.&lt;/p&gt;
+&lt;p&gt;Once it&amp;rsquo;s done, you can build the package with&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;./bazel-bin/tensorflow/tools/pip_package/build_pip_package --nightly_flag /tmp/tensorflow_pkg
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;After this, in the folder &lt;code&gt;tmp/tensorflow_pkg/&lt;/code&gt;, you will find the &lt;code&gt;.whl&lt;/code&gt; file. For example, it could be something like &lt;code&gt;tensorflow-2.6.0-cp38-cp38-macosx_10_11_x86_64.whl&lt;/code&gt;, or in our case, something like &lt;code&gt;tf_nightly-2.8.0-cp39&lt;/code&gt; and more stuff. Rename that file as &lt;code&gt;tf_nightly-2.8.0-py3-none-any.whl&lt;/code&gt; or, in general, &lt;code&gt;tensorflow&lt;/code&gt; or &lt;code&gt;tf_nightly&lt;/code&gt; depending on the version you are using, followed by the version &lt;code&gt;-2.x.y&lt;/code&gt; followed by &lt;code&gt;py3-none-any.whl&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Finally, run:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;python -m pip install /tmp/tensorflow_pkg/tf_nightly-2.8.0-py3-none-any.whl
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&#34;install-tensorflow-probability&#34;&gt;Install TensorFlow Probability&lt;/h2&gt;
+&lt;p&gt;For tfp, things are a bit easier, with only minor modifications from the &lt;a href=&#34;https://www.tensorflow.org/probability/install&#34; target=&#34;_blank&#34; rel=&#34;noopener&#34;&gt;official website&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The list of commands to run is:&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;  git clone https://github.com/tensorflow/probability.git
+  cd probability
+  bazel build --copt=-O3 --copt=-march=native :pip_pkg
+  PKGDIR=$(mktemp -d)
+  ./bazel-bin/pip_pkg $PKGDIR
+  python -m pip install --upgrade $PKGDIR/*.whl
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And you are done!&lt;/p&gt;
+&lt;h2 id=&#34;conclusions&#34;&gt;Conclusions&lt;/h2&gt;
+&lt;p&gt;This was the procedure I used to install TF and TFP on my Mac M1 with Rosetta. If you find better way to do that, or a way to install both nightly versions directly on M1, please reach out!
+After all, who wouldn&amp;rsquo;t like to train their models on GPU with a Mac?&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Welcome to Wowchemy, the website builder for Hugo</title>

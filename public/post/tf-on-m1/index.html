@@ -30,7 +30,7 @@
   
     
   
-  <meta name="description" content="" />
+  <meta name="description" content="In this post, I will show how you can install tf-nightly and tfp-nightly on your Mac M1 Pro with Rosetta" />
 
   
   <link rel="alternate" hreflang="en-us" href="https://www.theunconsciousstatistician.com/post/tf-on-m1/" />
@@ -287,16 +287,15 @@
   
   
     
-    
   
   
-  <meta property="twitter:card" content="summary" />
+  <meta property="twitter:card" content="summary_large_image" />
   
   <meta property="og:site_name" content="The Unconscious Statistician" />
   <meta property="og:url" content="https://www.theunconsciousstatistician.com/post/tf-on-m1/" />
-  <meta property="og:title" content="Tf on M1 | The Unconscious Statistician" />
-  <meta property="og:description" content="" /><meta property="og:image" content="https://www.theunconsciousstatistician.com/media/icon_hu5e71b6bd4b277cfc8175c1349cc66ed0_36502_512x512_fill_lanczos_center_3.png" />
-    <meta property="twitter:image" content="https://www.theunconsciousstatistician.com/media/icon_hu5e71b6bd4b277cfc8175c1349cc66ed0_36502_512x512_fill_lanczos_center_3.png" /><meta property="og:locale" content="en-us" />
+  <meta property="og:title" content="How to install TensorFlow and TensorFlow Probability (nightly) on Mac M1 Pro with Rosetta | The Unconscious Statistician" />
+  <meta property="og:description" content="In this post, I will show how you can install tf-nightly and tfp-nightly on your Mac M1 Pro with Rosetta" /><meta property="og:image" content="https://www.theunconsciousstatistician.com/post/tf-on-m1/featured.jpg" />
+    <meta property="twitter:image" content="https://www.theunconsciousstatistician.com/post/tf-on-m1/featured.jpg" /><meta property="og:locale" content="en-us" />
   
     
       <meta
@@ -330,7 +329,11 @@
     "@type": "WebPage",
     "@id": "https://www.theunconsciousstatistician.com/post/tf-on-m1/"
   },
-  "headline": "Tf on M1",
+  "headline": "How to install TensorFlow and TensorFlow Probability (nightly) on Mac M1 Pro with Rosetta",
+  
+  "image": [
+    "https://www.theunconsciousstatistician.com/post/tf-on-m1/featured.jpg"
+  ],
   
   "datePublished": "2021-11-06T17:10:48+01:00",
   "dateModified": "2021-11-06T17:10:48+01:00",
@@ -348,7 +351,7 @@
       "url": "https://www.theunconsciousstatistician.com/media/icon_hu5e71b6bd4b277cfc8175c1349cc66ed0_36502_192x192_fill_lanczos_center_3.png"
     }
   },
-  "description": ""
+  "description": "In this post, I will show how you can install tf-nightly and tfp-nightly on your Mac M1 Pro with Rosetta"
 }
 </script>
 
@@ -364,7 +367,7 @@
 
 
 
-  <title>Tf on M1 | The Unconscious Statistician</title>
+  <title>How to install TensorFlow and TensorFlow Probability (nightly) on Mac M1 Pro with Rosetta | The Unconscious Statistician</title>
 </head>
 
 
@@ -598,22 +601,40 @@
 
 
 
-  
+
+
+
+
+
+
+
 
   
-  
-  
-<div class="article-container pt-3">
-  <h1>Tf on M1</h1>
-
-  
-
   
     
+  
+
+
+<div class="article-container pt-3">
+  <h1>How to install TensorFlow and TensorFlow Probability (nightly) on Mac M1 Pro with Rosetta</h1>
+
+  
+
+  
 
 
 <div class="article-metadata">
 
+  
+  
+  
+  
+  <div>
+    
+
+  <span >
+      Gianluigi Silvestri</span>
+  </div>
   
   
 
@@ -632,7 +653,7 @@
   
   <span class="middot-divider"></span>
   <span class="article-reading-time">
-    0 min read
+    4 min read
   </span>
   
 
@@ -648,13 +669,20 @@
 
 </div>
 
-    
-
-
-
-
-
   
+
+
+
+
+
+</div>
+
+
+<div class="article-header article-container featured-image-wrapper mt-4 mb-4" style="max-width: 720px; max-height: 446px;">
+  <div style="position: relative">
+    <img src="/post/tf-on-m1/featured_hubce032584fb74d9ff7082ca516ba17b2_99619_720x0_resize_q75_lanczos.jpg" alt="" class="featured-image">
+    
+  </div>
 </div>
 
 
@@ -662,7 +690,75 @@
   <div class="article-container">
 
     <div class="article-style">
-      
+      <h2 id="introduction">Introduction</h2>
+<p>If like me you recently upgraded to the latest MacBook Pro with M1 chip and use the nightly version of TensorFlow (TF) and TensorFlow Probability (TFP) in most of your research projects, then you&rsquo;ll probably find this page useful. I initially followed the <a href="https://developer.apple.com/metal/tensorflow-plugin/" target="_blank" rel="noopener">Apple&rsquo;s tutorial</a> to install TF 2.6 on M1, which worked smoothly and allows you to use M1&rsquo;s GPU. I could also install TFP with conda, but could not get the latest version which led to some conflicts. I quickly had to give up on using TF and TFP for M1 (if you figure out a way, please let me know!!).
+A different strategy is to install python libraries for x86 using Rosetta 2. While this can be done easily for most python packages, it turned out to be quite tricky for TF and TFP. In fact, you can&rsquo;t just <code>pip install tf-nightly tfp-nightly</code>, as Rosetta 2 does not support the AVX instruction set.
+In this post, I will guide you thorugh the procedure I used to get both <code>tf-nightly</code> and <code>tfp-nightly</code> to work on the M1 chip with Rosetta 2. Let&rsquo;s start!</p>
+<h2 id="preliminaries">Preliminaries</h2>
+<p>Before we start, you need to change the way the Terminal app is open, and set it to be with Rosetta. To do so, in <code>Applications/Utilities</code>, right click on Terminal, then Get Info, and check the box &lsquo;Open using Rosetta&rsquo;. Make sure to close and reopen the terminal.</p>
+<p>As first step, you need the Xcode Command Line Tools installed. You can do this by running:</p>
+<pre><code class="language-bash">xcode-select --install
+</code></pre>
+<p>Then, we need homebrew for x86. Simply install homebrew:</p>
+<pre><code class="language-bash">/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&quot;
+</code></pre>
+<p>and then rename it by copying the following line in the file <code>.zshrc</code> :<code>alias brow='/usr/local/bin/brew'</code>. In this way, you can use M1  <code>brew</code> and x86 brew translated with Rosetta <code>brow</code>.</p>
+<p>Next step, we need to install miniconda and create an environment. Start with:</p>
+<pre><code class="language-bash">brow install --cask miniconda
+</code></pre>
+<p>Then, you need to run <code>conda init</code>. if you have previously installed miniforge, you need to remove from the file <code>.bash_profile</code> everything between (and including):</p>
+<pre><code class="language-bash"># &gt;&gt;&gt; conda initialize &gt;&gt;&gt;
+...
+# &lt;&lt;&lt; conda initialize &lt;&lt;&lt;
+</code></pre>
+<p>and then run <code>conda init</code> again.</p>
+<p>Now, type <code>source activate .bash_profile</code>, and then <code>conda create -n env_name python=3.9</code>. After the environment is created, type <code>conda activate env_name</code>.</p>
+<p>As last part of the preliminaries, we need to install <code>bazel</code>, which will allow us to compile TF from source. I actually followed a different route here, but do not know whether that&rsquo;s necessary or if simply installyng <code>bazel</code> with homebrew would be enough. What I did is explained <a href="https://github.com/tensorflow/tensorflow/issues/46044#issuecomment-801349383" target="_blank" rel="noopener">here</a>, and consists of:</p>
+<pre><code class="language-bash">brow install zlib
+brow install bzip2
+brow install sqlite
+brow install libiconv
+brow install libzip
+brow install xz
+brow install bazelisk
+brow install gnu-sed
+</code></pre>
+<h2 id="install-tensorflow">Install TensorFlow</h2>
+<p>For this part, I mostly followed the <a href="https://www.tensorflow.org/install/source" target="_blank" rel="noopener">instructions to build from source</a> with some minor modifications. Making sure that you are in the conda environment previously created (env_name in our example), type:</p>
+<pre><code class="language-bash">pip install -U pip numpy wheel
+pip install -U keras_preprocessing --no-deps
+</code></pre>
+<p>Then, clone the TF git repo:</p>
+<pre><code class="language-bash">git clone https://github.com/tensorflow/tensorflow.git
+cd tensorflow
+</code></pre>
+<p>If you need a specific version of tensorflow, for example 2.7, you can type <code>git checkout r2.7</code>. However, here I will show how to install the latest (nightly) version. To start the build, type:</p>
+<pre><code class="language-bash">./configure
+bazel build //tensorflow/tools/pip_package:build_pip_package
+</code></pre>
+<p>This will take at least a couple of hours.</p>
+<p>Once it&rsquo;s done, you can build the package with</p>
+<pre><code class="language-bash">./bazel-bin/tensorflow/tools/pip_package/build_pip_package --nightly_flag /tmp/tensorflow_pkg
+</code></pre>
+<p>After this, in the folder <code>tmp/tensorflow_pkg/</code>, you will find the <code>.whl</code> file. For example, it could be something like <code>tensorflow-2.6.0-cp38-cp38-macosx_10_11_x86_64.whl</code>, or in our case, something like <code>tf_nightly-2.8.0-cp39</code> and more stuff. Rename that file as <code>tf_nightly-2.8.0-py3-none-any.whl</code> or, in general, <code>tensorflow</code> or <code>tf_nightly</code> depending on the version you are using, followed by the version <code>-2.x.y</code> followed by <code>py3-none-any.whl</code>.</p>
+<p>Finally, run:</p>
+<pre><code class="language-bash">python -m pip install /tmp/tensorflow_pkg/tf_nightly-2.8.0-py3-none-any.whl
+</code></pre>
+<h2 id="install-tensorflow-probability">Install TensorFlow Probability</h2>
+<p>For tfp, things are a bit easier, with only minor modifications from the <a href="https://www.tensorflow.org/probability/install" target="_blank" rel="noopener">official website</a>.</p>
+<p>The list of commands to run is:</p>
+<pre><code class="language-bash">  git clone https://github.com/tensorflow/probability.git
+  cd probability
+  bazel build --copt=-O3 --copt=-march=native :pip_pkg
+  PKGDIR=$(mktemp -d)
+  ./bazel-bin/pip_pkg $PKGDIR
+  python -m pip install --upgrade $PKGDIR/*.whl
+</code></pre>
+<p>And you are done!</p>
+<h2 id="conclusions">Conclusions</h2>
+<p>This was the procedure I used to install TF and TFP on my Mac M1 with Rosetta. If you find better way to do that, or a way to install both nightly versions directly on M1, please reach out!
+After all, who wouldn&rsquo;t like to train their models on GPU with a Mac?</p>
+
     </div>
 
     
@@ -685,7 +781,7 @@
       
       
       <li>
-        <a href="https://twitter.com/intent/tweet?url=https://www.theunconsciousstatistician.com/post/tf-on-m1/&amp;text=Tf%20on%20M1" target="_blank" rel="noopener" class="share-btn-twitter">
+        <a href="https://twitter.com/intent/tweet?url=https://www.theunconsciousstatistician.com/post/tf-on-m1/&amp;text=How%20to%20install%20TensorFlow%20and%20TensorFlow%20Probability%20%28nightly%29%20on%20Mac%20M1%20Pro%20with%20Rosetta" target="_blank" rel="noopener" class="share-btn-twitter">
           <i class="fab fa-twitter"></i>
         </a>
       </li>
@@ -698,7 +794,7 @@
       
       
       <li>
-        <a href="https://www.facebook.com/sharer.php?u=https://www.theunconsciousstatistician.com/post/tf-on-m1/&amp;t=Tf%20on%20M1" target="_blank" rel="noopener" class="share-btn-facebook">
+        <a href="https://www.facebook.com/sharer.php?u=https://www.theunconsciousstatistician.com/post/tf-on-m1/&amp;t=How%20to%20install%20TensorFlow%20and%20TensorFlow%20Probability%20%28nightly%29%20on%20Mac%20M1%20Pro%20with%20Rosetta" target="_blank" rel="noopener" class="share-btn-facebook">
           <i class="fab fa-facebook"></i>
         </a>
       </li>
@@ -711,7 +807,7 @@
       
       
       <li>
-        <a href="mailto:?subject=Tf%20on%20M1&amp;body=https://www.theunconsciousstatistician.com/post/tf-on-m1/" target="_blank" rel="noopener" class="share-btn-email">
+        <a href="mailto:?subject=How%20to%20install%20TensorFlow%20and%20TensorFlow%20Probability%20%28nightly%29%20on%20Mac%20M1%20Pro%20with%20Rosetta&amp;body=https://www.theunconsciousstatistician.com/post/tf-on-m1/" target="_blank" rel="noopener" class="share-btn-email">
           <i class="fas fa-envelope"></i>
         </a>
       </li>
@@ -724,7 +820,7 @@
       
       
       <li>
-        <a href="https://www.linkedin.com/shareArticle?url=https://www.theunconsciousstatistician.com/post/tf-on-m1/&amp;title=Tf%20on%20M1" target="_blank" rel="noopener" class="share-btn-linkedin">
+        <a href="https://www.linkedin.com/shareArticle?url=https://www.theunconsciousstatistician.com/post/tf-on-m1/&amp;title=How%20to%20install%20TensorFlow%20and%20TensorFlow%20Probability%20%28nightly%29%20on%20Mac%20M1%20Pro%20with%20Rosetta" target="_blank" rel="noopener" class="share-btn-linkedin">
           <i class="fab fa-linkedin-in"></i>
         </a>
       </li>
@@ -737,7 +833,7 @@
       
       
       <li>
-        <a href="whatsapp://send?text=Tf%20on%20M1%20https://www.theunconsciousstatistician.com/post/tf-on-m1/" target="_blank" rel="noopener" class="share-btn-whatsapp">
+        <a href="whatsapp://send?text=How%20to%20install%20TensorFlow%20and%20TensorFlow%20Probability%20%28nightly%29%20on%20Mac%20M1%20Pro%20with%20Rosetta%20https://www.theunconsciousstatistician.com/post/tf-on-m1/" target="_blank" rel="noopener" class="share-btn-whatsapp">
           <i class="fab fa-whatsapp"></i>
         </a>
       </li>
@@ -750,7 +846,7 @@
       
       
       <li>
-        <a href="https://service.weibo.com/share/share.php?url=https://www.theunconsciousstatistician.com/post/tf-on-m1/&amp;title=Tf%20on%20M1" target="_blank" rel="noopener" class="share-btn-weibo">
+        <a href="https://service.weibo.com/share/share.php?url=https://www.theunconsciousstatistician.com/post/tf-on-m1/&amp;title=How%20to%20install%20TensorFlow%20and%20TensorFlow%20Probability%20%28nightly%29%20on%20Mac%20M1%20Pro%20with%20Rosetta" target="_blank" rel="noopener" class="share-btn-weibo">
           <i class="fab fa-weibo"></i>
         </a>
       </li>
@@ -770,6 +866,7 @@
 
   
   
+    
 
 
 
@@ -789,7 +886,7 @@
     <div class="media-body">
       <h5 class="card-title"><a href="https://www.theunconsciousstatistician.com">Gianluigi Silvestri</a></h5>
       <h6 class="card-subtitle">PhD student in Machine Learning</h6>
-      <p class="card-text">My research interests include distributed robotics, mobile computing and programmable matter.</p>
+      
       <ul class="network-icon" aria-hidden="true">
   
     
@@ -866,6 +963,7 @@
   </div>
 
 
+  
 
 
 
