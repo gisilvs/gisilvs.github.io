@@ -92,7 +92,7 @@ comments:
     publication: true
     event: true
   disqus:
-    shortname: ''
+    shortname: 'gisilvs'
     show_count: true
   commento:
     url: ''
