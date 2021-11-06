@@ -663,6 +663,9 @@
   
   
   
+    <span class="middot-divider"></span>
+    <a href="/post/tf-on-m1/#disqus_thread"></a>
+  
 
   
   
@@ -693,16 +696,16 @@
       <h2 id="introduction">Introduction</h2>
 <p>If like me you recently upgraded to the latest MacBook Pro with M1 chip and use the nightly version of TensorFlow (TF) and TensorFlow Probability (TFP) in most of your research projects, then you&rsquo;ll probably find this page useful. I initially followed the <a href="https://developer.apple.com/metal/tensorflow-plugin/" target="_blank" rel="noopener">Apple&rsquo;s tutorial</a> to install TF 2.6 on M1, which worked smoothly and allows you to use M1&rsquo;s GPU. I could also install TFP with conda, but could not get the latest version which led to some conflicts. I quickly had to give up on using TF and TFP for M1 (if you figure out a way, please let me know!!).
 A different strategy is to install python libraries for x86 using Rosetta 2. While this can be done easily for most python packages, it turned out to be quite tricky for TF and TFP. In fact, you can&rsquo;t just <code>pip install tf-nightly tfp-nightly</code>, as Rosetta 2 does not support the AVX instruction set.
-In this post, I will guide you thorugh the procedure I used to get both <code>tf-nightly</code> and <code>tfp-nightly</code> to work on the M1 chip with Rosetta 2. Let&rsquo;s start!</p>
+In this post, I will guide you thorugh the procedure I used to get both <code>tf-nightly</code> and <code>tfp-nightly</code> to work on the M1 chip with Rosetta 2.</p>
 <h2 id="preliminaries">Preliminaries</h2>
-<p>Before we start, you need to change the way the Terminal app is open, and set it to be with Rosetta. To do so, in <code>Applications/Utilities</code>, right click on Terminal, then Get Info, and check the box &lsquo;Open using Rosetta&rsquo;. Make sure to close and reopen the terminal.</p>
+<p>Before we start, you need to change the way the Terminal app is open, and set it to be with Rosetta. To do so, in <code>Applications/Utilities</code>, right click on <code>Terminal</code>, then <code>Get Info</code>, and check the box &lsquo;Open using Rosetta&rsquo;. Make sure to close and reopen the terminal.</p>
 <p>As first step, you need the Xcode Command Line Tools installed. You can do this by running:</p>
 <pre><code class="language-bash">xcode-select --install
 </code></pre>
 <p>Then, we need homebrew for x86. Simply install homebrew:</p>
 <pre><code class="language-bash">/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&quot;
 </code></pre>
-<p>and then rename it by copying the following line in the file <code>.zshrc</code> :<code>alias brow='/usr/local/bin/brew'</code>. In this way, you can use M1  <code>brew</code> and x86 brew translated with Rosetta <code>brow</code>.</p>
+<p>and then rename it by copying the following line in the file <code>.zshrc</code>: <code>alias brow='/usr/local/bin/brew'</code>. In this way, you can use <code>brew</code> both on M1 (<code>brew</code>) and on x86 translated with Rosetta (<code>brow</code>).</p>
 <p>Next step, we need to install miniconda and create an environment. Start with:</p>
 <pre><code class="language-bash">brow install --cask miniconda
 </code></pre>
@@ -724,7 +727,7 @@ brow install bazelisk
 brow install gnu-sed
 </code></pre>
 <h2 id="install-tensorflow">Install TensorFlow</h2>
-<p>For this part, I mostly followed the <a href="https://www.tensorflow.org/install/source" target="_blank" rel="noopener">instructions to build from source</a> with some minor modifications. Making sure that you are in the conda environment previously created (env_name in our example), type:</p>
+<p>For this part, I mostly followed the <a href="https://www.tensorflow.org/install/source" target="_blank" rel="noopener">instructions to build from source</a> with some minor modifications. Making sure that you are in the conda environment previously created (<code>env_name</code> in our example), type:</p>
 <pre><code class="language-bash">pip install -U pip numpy wheel
 pip install -U keras_preprocessing --no-deps
 </code></pre>
@@ -740,12 +743,12 @@ bazel build //tensorflow/tools/pip_package:build_pip_package
 <p>Once it&rsquo;s done, you can build the package with</p>
 <pre><code class="language-bash">./bazel-bin/tensorflow/tools/pip_package/build_pip_package --nightly_flag /tmp/tensorflow_pkg
 </code></pre>
-<p>After this, in the folder <code>tmp/tensorflow_pkg/</code>, you will find the <code>.whl</code> file. For example, it could be something like <code>tensorflow-2.6.0-cp38-cp38-macosx_10_11_x86_64.whl</code>, or in our case, something like <code>tf_nightly-2.8.0-cp39</code> and more stuff. Rename that file as <code>tf_nightly-2.8.0-py3-none-any.whl</code> or, in general, <code>tensorflow</code> or <code>tf_nightly</code> depending on the version you are using, followed by the version <code>-2.x.y</code> followed by <code>py3-none-any.whl</code>.</p>
+<p>After this, in the folder <code>tmp/tensorflow_pkg/</code>, you will find the <code>.whl</code> file. For example, it could be something like <code>tensorflow-2.6.0-cp38-cp38-macosx_10_11_x86_64.whl</code>, or in our case, something like <code>tf_nightly-2.8.0-cp39</code> and more stuff. Rename that file as <code>tf_nightly-2.8.0-py3-none-any.whl</code> or, in general, <code>tensorflow</code> or <code>tf_nightly</code> depending on the version you are using, followed by the version <code>-2.x.y</code> followed by <code>-py3-none-any.whl</code>.</p>
 <p>Finally, run:</p>
 <pre><code class="language-bash">python -m pip install /tmp/tensorflow_pkg/tf_nightly-2.8.0-py3-none-any.whl
 </code></pre>
 <h2 id="install-tensorflow-probability">Install TensorFlow Probability</h2>
-<p>For tfp, things are a bit easier, with only minor modifications from the <a href="https://www.tensorflow.org/probability/install" target="_blank" rel="noopener">official website</a>.</p>
+<p>For TFP, things are a bit easier (and faster), with only minor modifications from the <a href="https://www.tensorflow.org/probability/install" target="_blank" rel="noopener">official website</a>.</p>
 <p>The list of commands to run is:</p>
 <pre><code class="language-bash">  git clone https://github.com/tensorflow/probability.git
   cd probability
@@ -754,7 +757,7 @@ bazel build //tensorflow/tools/pip_package:build_pip_package
   ./bazel-bin/pip_pkg $PKGDIR
   python -m pip install --upgrade $PKGDIR/*.whl
 </code></pre>
-<p>And you are done!</p>
+<p>And we are done!</p>
 <h2 id="conclusions">Conclusions</h2>
 <p>This was the procedure I used to install TF and TFP on my Mac M1 with Rosetta. If you find better way to do that, or a way to install both nightly versions directly on M1, please reach out!
 After all, who wouldn&rsquo;t like to train their models on GPU with a Mac?</p>
@@ -971,6 +974,42 @@ After all, who wouldn&rsquo;t like to train their models on GPU with a Mac?</p>
 
 
 
+  
+  
+  
+
+  
+  
+  
+
+  
+  <section id="comments">
+    
+<div id="disqus_thread"></div>
+<script>
+  var disqus_config = function () {
+    
+    
+    
+  };
+  (function() {
+    if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+      document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+      return;
+    }
+    var d = document, s = d.createElement('script'); s.async = true;
+    s.src = 'https://' + "gisilvs" + '.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+
+  </section>
+  
+
 
 
 
@@ -1121,6 +1160,8 @@ After all, who wouldn&rsquo;t like to train their models on GPU with a Mac?</p>
     
     
     
+    
+      <script id="dsq-count-scr" src="https://gisilvs.disqus.com/count.js" async></script>
     
 
     
