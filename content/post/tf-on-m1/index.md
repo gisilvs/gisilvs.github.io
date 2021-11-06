@@ -33,11 +33,11 @@ projects: []
 
 If like me you recently upgraded to the latest MacBook Pro with M1 chip and use the nightly version of TensorFlow (TF) and TensorFlow Probability (TFP) in most of your research projects, then you'll probably find this page useful. I initially followed the [Apple's tutorial](https://developer.apple.com/metal/tensorflow-plugin/) to install TF 2.6 on M1, which worked smoothly and allows you to use M1's GPU. I could also install TFP with conda, but could not get the latest version which led to some conflicts. I quickly had to give up on using TF and TFP for M1 (if you figure out a way, please let me know!!).
 A different strategy is to install python libraries for x86 using Rosetta 2. While this can be done easily for most python packages, it turned out to be quite tricky for TF and TFP. In fact, you can't just `pip install tf-nightly tfp-nightly`, as Rosetta 2 does not support the AVX instruction set.
-In this post, I will guide you thorugh the procedure I used to get both `tf-nightly` and `tfp-nightly` to work on the M1 chip with Rosetta 2. Let's start!
+In this post, I will guide you thorugh the procedure I used to get both `tf-nightly` and `tfp-nightly` to work on the M1 chip with Rosetta 2.
 
 ## Preliminaries
 
-Before we start, you need to change the way the Terminal app is open, and set it to be with Rosetta. To do so, in `Applications/Utilities`, right click on Terminal, then Get Info, and check the box 'Open using Rosetta'. Make sure to close and reopen the terminal.
+Before we start, you need to change the way the Terminal app is open, and set it to be with Rosetta. To do so, in `Applications/Utilities`, right click on `Terminal`, then `Get Info`, and check the box 'Open using Rosetta'. Make sure to close and reopen the terminal.
 
 As first step, you need the Xcode Command Line Tools installed. You can do this by running:
 
@@ -51,7 +51,7 @@ Then, we need homebrew for x86. Simply install homebrew:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-and then rename it by copying the following line in the file `.zshrc` :`alias brow='/usr/local/bin/brew'`. In this way, you can use M1  `brew` and x86 brew translated with Rosetta `brow`.
+and then rename it by copying the following line in the file `.zshrc`: `alias brow='/usr/local/bin/brew'`. In this way, you can use `brew` both on M1 (`brew`) and on x86 translated with Rosetta (`brow`).
 
 Next step, we need to install miniconda and create an environment. Start with:
 
@@ -86,7 +86,7 @@ brow install gnu-sed
 
 ## Install TensorFlow
 
-For this part, I mostly followed the [instructions to build from source](https://www.tensorflow.org/install/source) with some minor modifications. Making sure that you are in the conda environment previously created (env_name in our example), type:
+For this part, I mostly followed the [instructions to build from source](https://www.tensorflow.org/install/source) with some minor modifications. Making sure that you are in the conda environment previously created (`env_name` in our example), type:
 
 ```bash
 pip install -U pip numpy wheel
@@ -115,7 +115,7 @@ Once it's done, you can build the package with
 ./bazel-bin/tensorflow/tools/pip_package/build_pip_package --nightly_flag /tmp/tensorflow_pkg
 ```
 
-After this, in the folder `tmp/tensorflow_pkg/`, you will find the `.whl` file. For example, it could be something like `tensorflow-2.6.0-cp38-cp38-macosx_10_11_x86_64.whl`, or in our case, something like `tf_nightly-2.8.0-cp39` and more stuff. Rename that file as `tf_nightly-2.8.0-py3-none-any.whl` or, in general, `tensorflow` or `tf_nightly` depending on the version you are using, followed by the version `-2.x.y` followed by `py3-none-any.whl`.
+After this, in the folder `tmp/tensorflow_pkg/`, you will find the `.whl` file. For example, it could be something like `tensorflow-2.6.0-cp38-cp38-macosx_10_11_x86_64.whl`, or in our case, something like `tf_nightly-2.8.0-cp39` and more stuff. Rename that file as `tf_nightly-2.8.0-py3-none-any.whl` or, in general, `tensorflow` or `tf_nightly` depending on the version you are using, followed by the version `-2.x.y` followed by `-py3-none-any.whl`.
 
 Finally, run:
 
@@ -124,7 +124,7 @@ python -m pip install /tmp/tensorflow_pkg/tf_nightly-2.8.0-py3-none-any.whl
 ```
 ## Install TensorFlow Probability
 
-For tfp, things are a bit easier, with only minor modifications from the [official website](https://www.tensorflow.org/probability/install).
+For TFP, things are a bit easier (and faster), with only minor modifications from the [official website](https://www.tensorflow.org/probability/install).
 
 The list of commands to run is:
 
@@ -137,7 +137,7 @@ The list of commands to run is:
   python -m pip install --upgrade $PKGDIR/*.whl
 ```
 
-And you are done!
+And we are done!
 
 
 ## Conclusions
