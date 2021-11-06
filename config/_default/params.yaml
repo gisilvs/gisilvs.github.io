@@ -39,9 +39,9 @@ address_format: en-us
 
 highlight: true
 highlight_languages:
-  - r
-math: false
-diagram: false
+  - python
+math: true
+diagram: true
 privacy_pack: false
 edit_page:
   repo_url: ''
