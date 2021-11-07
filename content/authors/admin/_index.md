@@ -46,3 +46,8 @@ highlight_name: false
 ---
 
 I am a PhD student in Machine Learning at OnePlanet Research Center and Donders Institute for Brain, Cognition and Behaviour. My research interests include Variational Inference, Normalizing Flows and Reinforcement Learning.
+
+From Wikipedia: The law of the unconscious statistician, or _LOTUS_, is a theorem used to calculate the expected value of a function $g(X)$ of a random variable $X$ when one knows the probability distribution of $X$ but one does not know the distribution of $g(X)$:
+$$
+E[g(X)]=\int_{-\infty}^{\infty}g(X)f_X(x)dx
+$$
