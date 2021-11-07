@@ -51,3 +51,4 @@ From Wikipedia: The law of the unconscious statistician, or _LOTUS_, is a theore
 $$
 E[g(X)]=\int_{-\infty}^{\infty}g(X)f_X(x)dx
 $$
+This proposition is known as the law of the unconscious statistician because of a purported tendency to use the identity without realizing that it must be treated as the result of a rigorously proved theorem, not merely a definition.
