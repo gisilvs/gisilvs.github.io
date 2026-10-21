@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Building Ava, a differentiable synthesizer that turns natural language descriptions into playable presets.">
+  <title>Ava: Text-to-Synth — Gianluigi Silvestri</title>
+  <link rel="canonical" href="https://gisilvs.github.io/blog/ava/">
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="name" href="../../">Gianluigi Silvestri<span aria-hidden="true">.</span></a>
+    <nav aria-label="Main navigation">
+      <a href="../../">About</a>
+      <a href="../" aria-current="page">Blog</a>
+    </nav>
+  </header>
+
+  <main id="main" class="article">
+    <article aria-labelledby="article-heading">
+      <header class="article-header">
+        <p class="eyebrow">Work in progress</p>
+        <h1 id="article-heading">Ava: Text-to-Synth</h1>
+        <p class="article-byline">By Gianluigi Silvestri</p>
+      </header>
+
+      <section class="article-section" aria-labelledby="preamble">
+        <h2 id="preamble">Preamble</h2>
+        <p>A few years ago, I got into music production as a hobby. I spent quite some time learning about sound design, although I never became particularly good at it. My usual workflow was something like this: I had a sound in mind, tried to recreate it on my favorite synthesizer, failed, and started scrolling endlessly through presets. I would find plenty of interesting sounds, but rarely the one I was looking for. Eventually, I would get distracted, forget my original idea, and give up.</p>
+
+        <p>Around the same time, I became curious about how synthesizers actually worked. I started reading <a href="https://www.theaudioprogrammer.com/books-and-courses/synth-plugin-book">The Audio Programmer's book on building synthesizer plugins</a>, and realized that much of a synthesizer is essentially a sequence of mathematical operations on audio signals, many of which can be made differentiable.</p>
+
+        <p>That got me thinking: <strong>what if I implemented a synthesizer in PyTorch, and used backpropagation to learn its parameters?</strong></p>
+
+        <p>The original idea was <strong>sound-to-synth</strong>: given an audio sample, a neural network would predict the synthesizer parameters needed to reproduce it. By passing these parameters through a differentiable synth and comparing the resulting audio with the original, we could train the network end-to-end, using the synthesizer itself as the decoder.</p>
+
+        <p>But then I realized this wasn't quite the problem I wanted to solve. How often do you have an audio sample of the exact sound you're imagining? Most of the time, you can at least try to describe it: <em>a warm, slightly detuned pad with a slow attack</em>, or <em>a bright, punchy pluck</em>. And even if the result isn't perfect, having a reasonably close preset to start tweaking would already make sound design much easier.</p>
+
+        <p>So the idea evolved into <strong>text-to-synth</strong>. I initially considered using a joint audio-text embedding model like CLAP, but eventually decided to take advantage of pretrained text-to-audio generative models to create paired text and audio data, and learn to map the resulting sounds to synthesizer parameters.</p>
+
+        <p>The result is <strong>Ava</strong>: a simple subtractive synthesizer that lets you generate presets from natural language descriptions, while still being able to play and tweak them like in any regular synth.</p>
+
+        <p>In this post, I'll walk through the synthesizer implementation, the training experiments, what worked (and what didn't), and how everything came together in a working plugin. Most of the project was developed on my MacBook M1 Pro, with a few hours of A100 GPU time for the more expensive experiments, and plenty of help from the open-source community.</p>
+
+        <p>And why Ava? It's named after the robot protagonist of <em>Ex Machina</em>, the movie that inspired me to study AI many years ago.</p>
+      </section>
+    </article>
+  </main>
+
+  <footer>Gianluigi Silvestri · 2026</footer>
+</body>
+</html>
