@@ -248,3 +248,5 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
   .envelope-figure { padding: 14px; }
   #envelope-grid { font-size: 20px; }
 }
+
+.waveform-comparison > summary { cursor: pointer; color: var(--accent); font-size: 15px; }
