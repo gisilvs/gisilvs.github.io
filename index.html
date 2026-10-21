@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Projects and notes by Gianluigi Silvestri on machine learning, sound, and synthesis.">
-  <title>Gianluigi Silvestri</title>
+  <meta name="description" content="Gianluigi Silvestri, machine learning researcher working on generative models. Portfolio, research links, and blog.">
+  <title>Gianluigi Silvestri — Machine Learning Researcher</title>
   <link rel="canonical" href="https://gisilvs.github.io/">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -13,32 +13,49 @@
   <header class="site-header">
     <a class="name" href="./">Gianluigi Silvestri<span aria-hidden="true">.</span></a>
     <nav aria-label="Main navigation">
-      <a href="#projects">Projects</a>
-      <a href="https://github.com/gisilvs">GitHub ↗</a>
+      <a href="./" aria-current="page">About</a>
+      <a href="blog/">Blog</a>
     </nav>
   </header>
 
-  <main id="main">
-    <section class="intro" aria-labelledby="intro-heading">
-      <p class="eyebrow">Notes & experiments</p>
-      <h1 id="intro-heading">Machine learning,<br>sound, and synthesis.</h1>
-      <p class="intro-text">A place for the projects I’m building and what I learn along the way.</p>
+  <main id="main" class="portfolio">
+    <section class="profile" aria-labelledby="profile-heading">
+      <div class="portrait">
+        <img src="assets/profile.jpg" alt="Gianluigi Silvestri smiling in front of a city skyline." width="1200" height="1600" fetchpriority="high">
+      </div>
+      <div class="profile-heading">
+        <h1 id="profile-heading">Gianluigi Silvestri</h1>
+        <p class="role">Machine learning researcher</p>
+        <div class="social-links" aria-label="Contact and profiles">
+          <a class="social-link" href="mailto:gianlu.silvestri@gmail.com" aria-label="Email Gianluigi Silvestri" title="gianlu.silvestri@gmail.com">
+            <span class="icon-button"><svg aria-hidden="true"><use href="assets/icons.svg#email"></use></svg></span>
+            <span>Email</span>
+          </a>
+          <a class="social-link" href="https://scholar.google.com/citations?user=BKRLVogAAAAJ&amp;hl=en" target="_blank" rel="noopener noreferrer" aria-label="Google Scholar profile">
+            <span class="icon-button"><svg aria-hidden="true"><use href="assets/icons.svg#scholar"></use></svg></span>
+            <span>Scholar</span>
+          </a>
+          <a class="social-link" href="https://www.linkedin.com/in/gianluigi-silvestri-b9589610a/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn profile">
+            <span class="icon-button"><svg aria-hidden="true"><use href="assets/icons.svg#linkedin"></use></svg></span>
+            <span>LinkedIn</span>
+          </a>
+          <a class="social-link" href="https://github.com/gisilvs" target="_blank" rel="noopener noreferrer" aria-label="GitHub profile">
+            <span class="icon-button"><svg aria-hidden="true"><use href="assets/icons.svg#github"></use></svg></span>
+            <span>GitHub</span>
+          </a>
+          <a class="social-link" href="assets/Gianluigi_Silvestri_CV.pdf" download aria-label="Download CV as a PDF">
+            <span class="icon-button"><svg aria-hidden="true"><use href="assets/icons.svg#cv"></use></svg></span>
+            <span>CV</span>
+          </a>
+        </div>
+      </div>
     </section>
 
-    <section id="projects" aria-labelledby="projects-heading">
-      <h2 class="section-label" id="projects-heading">Projects</h2>
-      <article class="project">
-        <div class="project-copy">
-          <p class="eyebrow">Text-to-Synth</p>
-          <h3>Ava</h3>
-          <p>Describe a sound. Turn it into a playable synthesizer preset.</p>
-          <p class="secondary">An experiment combining differentiable synthesis, learned audio representations, and a C++ instrument.</p>
-          <p class="status"><span aria-hidden="true"></span>Article and listening examples coming soon</p>
-        </div>
-        <a class="project-image" href="assets/ava-interface.png" aria-label="View the Ava interface at full size">
-          <img src="assets/ava-interface.png" alt="Ava’s interface, with oscillator, filter, modulation, and envelope controls." width="1080" height="880">
-        </a>
-      </article>
+    <section class="bio" aria-label="About me">
+      <p>I'm a machine learning researcher, currently wrapping up my PhD at <strong>Radboud University</strong>. My research focuses on generative models, particularly diffusion models, flow maps and VAEs.</p>
+      <p>I've worked with teams at <strong>Qualcomm AI Research</strong>, <strong>Sony AI</strong> and <strong>Sakana AI</strong>, exploring different areas of machine learning and generative AI.</p>
+      <p>I'm currently looking for <strong>Machine Learning Scientist or Engineer roles</strong>. I'm especially interested in generative models for images, video, music, speech and world models, and their applications in media and entertainment.</p>
+      <a class="text-link" href="blog/">Read the blog <span aria-hidden="true">→</span></a>
     </section>
   </main>
 

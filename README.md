@@ -1,6 +1,8 @@
 # Gianluigi Silvestri
 
-Personal website: https://gisilvs.github.io/
+Personal portfolio: https://gisilvs.github.io/
+
+Blog: https://gisilvs.github.io/blog/
 
 Plain HTML and CSS. To preview locally:
 
