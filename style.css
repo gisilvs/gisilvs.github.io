@@ -249,7 +249,6 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
   #envelope-grid { font-size: 20px; }
 }
 
-.waveform-comparison > summary { cursor: pointer; color: var(--accent); font-size: 15px; }
 
 .deep-dive-body h4 { margin: 32px 0 18px; font: normal 22px/1.4 Georgia, serif; }
 .deep-dive-body pre code { font-size: 14px; }
