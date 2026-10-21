@@ -46,6 +46,102 @@
 
         <p>And why Ava? It's named after the robot protagonist of <em>Ex Machina</em>, the movie that inspired me to study AI many years ago.</p>
       </section>
+
+      <section class="article-section" aria-labelledby="the-synth">
+        <h2 id="the-synth">The Synth</h2>
+        <p>Let's start with the synthesizer itself. For this project, I wanted something relatively simple, but still expressive enough to generate a good variety of sounds. So I went with a <strong>subtractive synthesizer</strong>.</p>
+
+        <p>For those unfamiliar with sound synthesis, a subtractive synthesizer starts by generating one or more waveforms, typically rich in harmonics, and then shapes the resulting sound using filters, envelopes, and other modulations. It's one of the most common approaches to sound synthesis, and a good starting point for this project.</p>
+
+        <p>Ava follows a fairly standard architecture, illustrated in the diagram below.</p>
+
+        <figure class="synth-diagram" aria-labelledby="signal-caption">
+          <figcaption id="signal-caption">
+            <strong>The signal path</strong>
+            <span>Open a block to see what it does.</span>
+          </figcaption>
+          <div class="flow-oscillators">
+            <details class="signal-node" name="synth-stage">
+              <summary>Oscillator A</summary>
+              <p>A sine, triangle, square or sawtooth wave at the played note's pitch.</p>
+            </details>
+            <details class="signal-node" name="synth-stage">
+              <summary>Oscillator B</summary>
+              <p>The same four waveform choices, with a detuning offset relative to oscillator A.</p>
+            </details>
+          </div>
+          <svg class="flow-merge" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true">
+            <defs><marker id="signal-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0 6 3 0 6Z" fill="currentColor"/></marker></defs>
+            <path d="M100 0V16H200 M300 0V16H200 M200 16V37" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#signal-arrow)"/>
+          </svg>
+          <div class="flow-step">
+            <details class="signal-node" name="synth-stage">
+              <summary>Oscillator mix</summary>
+              <p>The mix parameter crossfades between the two oscillators.</p>
+            </details>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">↓</div>
+          <div class="flow-side-row">
+            <div class="flow-source"><span>White<br>noise</span><span aria-hidden="true">→</span></div>
+            <details class="signal-node" name="synth-stage">
+              <summary>Noise blend</summary>
+              <p>Noise mix blends white noise into the oscillator signal before filtering.</p>
+            </details>
+            <span></span>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">↓</div>
+          <div class="flow-side-row">
+            <span></span>
+            <details class="signal-node" name="synth-stage">
+              <summary>Resonant low-pass</summary>
+              <p>Cutoff controls brightness; resonance emphasizes frequencies near the cutoff. The cutoff follows the played pitch. The LFO moves it over time, with its rate and depth setting the speed and amount.</p>
+            </details>
+            <div class="flow-control"><span class="modulation-arrow" aria-hidden="true">⇠</span><span>LFO<br><small>rate, depth</small></span></div>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">↓</div>
+          <div class="flow-step">
+            <details class="signal-node" name="synth-stage">
+              <summary>Drive</summary>
+              <p>Soft distortion adds harmonic content before the amplitude envelope is applied.</p>
+            </details>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">↓</div>
+          <div class="flow-step">
+            <details class="signal-node" name="synth-stage">
+              <summary>ADSR envelope</summary>
+              <p>Attack, decay and sustain shape the held note's amplitude. Note-off starts the release.</p>
+            </details>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">↓</div>
+          <div class="flow-step">
+            <details class="signal-node" name="synth-stage">
+              <summary>Output gain</summary>
+              <p>Gain sets the preset's level. MIDI velocity also scales each note's amplitude, independently of the predicted preset.</p>
+            </details>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">↓</div>
+          <div class="flow-output">Audio output</div>
+          <p class="flow-note">Solid arrows carry audio; the dashed arrow shows cutoff modulation. Pitch, velocity and note-on/off arrive separately from MIDI.</p>
+        </figure>
+
+        <p>The synth has two oscillators, each supporting four waveforms: sine, triangle, square, and sawtooth. Their outputs are combined using a mixing parameter, and the second oscillator can be detuned relative to the first to create richer sounds. White noise can also be blended into the mixed signal before it passes through a resonant low-pass filter, whose cutoff frequency can be modulated by a low-frequency oscillator (LFO). The signal then passes through drive, followed by an ADSR amplitude envelope and output gain.</p>
+
+        <p>This gives us a relatively small set of parameters to predict:</p>
+        <ul>
+          <li><strong>Oscillators:</strong> waveform selection for each oscillator, mix, and detuning.</li>
+          <li><strong>Noise:</strong> white-noise mix.</li>
+          <li><strong>Filter:</strong> cutoff frequency and resonance.</li>
+          <li><strong>LFO:</strong> modulation rate and depth.</li>
+          <li><strong>Envelope:</strong> attack, decay, sustain, and release.</li>
+          <li><strong>Output:</strong> drive and gain.</li>
+        </ul>
+
+        <p>One important design decision was to <strong>exclude pitch and velocity from the predicted parameters</strong>. Unlike the other parameters, which define a synth preset, pitch and velocity are generally determined by the incoming MIDI notes. Besides, estimating pitch from audio is already a challenging problem on its own, and I didn't want the model to have to solve both problems simultaneously.</p>
+
+        <p>Instead, the synthesizer receives pitch, velocity, and note-on/note-off events as separate MIDI inputs, while the neural network only predicts the preset parameters. This simplifies the learning problem, although it also means that we need to know the MIDI information associated with each training sample. We'll see later how I dealt with that.</p>
+
+        <p>The resulting synth is intentionally quite limited compared to commercial synthesizers. There are no effects like reverb or chorus, no complex modulation matrix, and only two oscillators. But that's also part of the experiment: <strong>how much can we do with a relatively simple synthesis engine, and how well can a neural network learn to control it?</strong></p>
+      </section>
     </article>
   </main>
 

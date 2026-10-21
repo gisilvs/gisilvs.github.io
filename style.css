@@ -144,6 +144,44 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .article-section a { color: var(--accent); }
 .article-section strong { font-weight: 600; }
 
+/* Native disclosure blocks make the signal flow interactive without JavaScript. */
+.article-section + .article-section { margin-top: 54px; }
+.article-section ul { padding-left: 24px; margin: 0 0 24px; }
+.article-section li { padding-left: 4px; margin-bottom: 5px; }
+.synth-diagram {
+  margin: 32px 0;
+  padding: 24px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: 14px/1.5 system-ui, sans-serif;
+}
+.synth-diagram figcaption { text-align: center; margin-bottom: 24px; }
+.synth-diagram figcaption strong { display: block; font-size: 16px; }
+.synth-diagram figcaption span { color: var(--muted); font-size: 13px; }
+.flow-oscillators { display: grid; grid-template-columns: 1fr 1fr; align-items: end; }
+.flow-oscillators .signal-node { width: calc(100% - 12px); max-width: 250px; margin: 0 auto; }
+.signal-node { padding: 12px; border: 1px solid #c4d2c7; border-radius: 6px; background: #f0f3ec; }
+.signal-node summary { cursor: pointer; list-style: none; text-align: center; font-weight: 600; }
+.signal-node summary::-webkit-details-marker { display: none; }
+.signal-node summary::after { content: '+'; color: var(--accent); margin-left: 6px; font-weight: 400; }
+.signal-node[open] { border-color: var(--accent); background: #e9f0e5; }
+.signal-node[open] summary::after { content: '−'; }
+.signal-node summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.signal-node p { margin: 12px 0 0; color: var(--ink); font-size: 13px; line-height: 1.6; }
+.flow-merge { display: block; width: 100%; height: 32px; color: var(--accent); }
+.flow-step { display: flex; justify-content: center; }
+.flow-step .signal-node { width: 50%; max-width: 250px; }
+.flow-arrow { height: 28px; color: var(--accent); line-height: 28px; text-align: center; font-size: 21px; }
+.flow-side-row { display: grid; grid-template-columns: 1fr min(50%, 250px) 1fr; gap: 8px; align-items: center; }
+.flow-source, .flow-control { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.flow-source { justify-content: flex-end; }
+.flow-source > span:last-child { color: var(--accent); font-size: 22px; }
+.flow-control { color: #86672f; }
+.flow-control small { font-size: 10px; }
+.modulation-arrow { font-size: 24px; }
+.flow-output { text-align: center; font-weight: 600; }
+.synth-diagram .flow-note { margin: 22px auto 0; max-width: 470px; color: var(--muted); text-align: center; font-size: 12px; }
+
 @media (max-width: 650px) {
   body { padding: 0 22px; }
   .site-header { padding: 22px 0; }
