@@ -404,8 +404,6 @@ cutoff_hz <span class="code-operator">=</span> freq<span class="code-operator">.
 <span class="code-comment"># Recalculate a and b using exactly the same coefficient function as before.</span>
 a<span class="code-operator">,</span> b <span class="code-operator">=</span> <span class="code-namespace">self</span><span class="code-operator">.</span>lowpass<span class="code-operator">.</span><span class="code-function">coefficients</span><span class="code-operator">(</span>cutoff_hz<span class="code-operator">,</span> q<span class="code-operator">)</span></code></pre>
 
-<p><code>self.lfo(time, rate, depth)</code> returns <code>depth * sin(2π * rate * time)</code>, an offset in octaves. We therefore change the cutoff without changing the oscillator's pitch.</p>
-
 <h3 id="drive-gain-and-putting-everything-together">Drive, gain, and putting everything together</h3>
 
 <p>Drive adds soft distortion, reshaping the waveform and adding harmonics. For a drive amount <span class="math">d&gt;0</span>, an input sample <span class="math">x</span> becomes:</p>
