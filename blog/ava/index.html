@@ -387,8 +387,6 @@ filtered <span class="code-operator">=</span> <span class="code-function">lfilte
                    clamp<span class="code-operator">=</span><span class="code-keyword">False</span><span class="code-operator">,</span> batching<span class="code-operator">=</span><span class="code-keyword">True</span><span class="code-operator">)</span>
 <span class="code-keyword">return</span> filtered<span class="code-operator">.</span><span class="code-function">to</span><span class="code-operator">(</span>audio<span class="code-operator">.</span>dtype<span class="code-operator">)</span></code></pre>
 
-<p>The calculation uses float64 internally for numerical stability, then returns the audio in its original dtype. PyTorch preserves gradients through the audio, cutoff and Q.</p>
-
 <h4>Adding LFO modulation</h4>
 
 <p>The LFO moves the cutoff up and down. Its rate controls how fast it moves, and its depth controls how far. Each time the cutoff changes, we calculate new <span class="math">a</span> and <span class="math">b</span> coefficients using the same formulas above.</p>
@@ -407,12 +405,6 @@ cutoff_hz <span class="code-operator">=</span> freq<span class="code-operator">.
 a<span class="code-operator">,</span> b <span class="code-operator">=</span> <span class="code-namespace">self</span><span class="code-operator">.</span>lowpass<span class="code-operator">.</span><span class="code-function">coefficients</span><span class="code-operator">(</span>cutoff_hz<span class="code-operator">,</span> q<span class="code-operator">)</span></code></pre>
 
 <p><code>self.lfo(time, rate, depth)</code> returns <code>depth * sin(2π * rate * time)</code>, an offset in octaves. We therefore change the cutoff without changing the oscillator's pitch.</p>
-
-<h4>Why TorchLPC instead of lfilter?</h4>
-
-<p><a href="https://docs.pytorch.org/audio/stable/generated/torchaudio.functional.lfilter.html"><code>torchaudio.functional.lfilter</code></a> applies one fixed coefficient set to each filter for the entire input waveform. Its batch option runs several such filters; it does not let the coefficients change over time within a filter.</p>
-
-<p>Calling it separately on short blocks would require us to handle the filter history between calls. Instead, <strong><a href="https://github.com/DiffAPF/torchlpc">TorchLPC</a></strong> accepts coefficients that vary at each sample and differentiates through that changing filter. We repeat each coefficient set over its 120-sample interval, calculate the input terms in PyTorch, and let TorchLPC handle the recursive output terms in one pass. The history continues across updates, and gradients can flow back to the LFO rate and depth.</p>
 
 <h3 id="drive-gain-and-putting-everything-together">Drive, gain, and putting everything together</h3>
 
