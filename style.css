@@ -180,7 +180,6 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .flow-control small { font-size: 10px; }
 .modulation-arrow { font-size: 24px; }
 .flow-output { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
-.synth-diagram .flow-note { margin: 22px auto 0; max-width: 470px; color: var(--muted); text-align: center; font-size: 12px; }
 
 /* The sketches are decorative examples; oscillator waveform choices stay independent. */
 .signal-sketch { display: block; width: 36px; height: 22px; flex: 0 0 36px; color: var(--accent); }
