@@ -6,7 +6,7 @@
   <meta name="description" content="Building Ava, a differentiable synthesizer that turns natural language descriptions into playable presets.">
   <title>Ava: Text-to-Synth — Gianluigi Silvestri</title>
   <link rel="canonical" href="https://gisilvs.github.io/blog/ava/">
-  <link rel="stylesheet" href="../../style.css?v=filter-simplified">
+  <link rel="stylesheet" href="../../style.css?v=parameter-recovery">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
   <script defer src="deep-dive.js"></script>
@@ -421,6 +421,81 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 <p>So, before training any neural networks, the next question was: can we actually recover the synthesizer parameters by optimizing them directly?</p>
           </div>
         </details>
+      </section>
+
+      <section class="article-section recovery-section" aria-labelledby="is-differentiation-through-the-synth-effective">
+        <h2 id="is-differentiation-through-the-synth-effective">Is Differentiation Through the Synth Effective?</h2>
+
+        <p>Now that we have a differentiable synthesizer, the first question is whether we can actually recover its parameters through gradient descent. Just because an operation is differentiable doesn't necessarily mean it's easy to optimize.</p>
+
+        <p>To test this, I started with a simple experiment. First, I chose a synthesizer preset and used it to generate target audio. Then, I randomly initialized the parameter I wanted to recover and optimized it to reproduce the target, keeping all other parameters fixed.</p>
+
+        <p>The objective was simply to minimize the mean squared error (MSE) between the target and reconstructed waveforms:</p>
+
+        <div class="math display-math">\mathcal{L}_{\mathrm{MSE}}=\frac{1}{T}\sum_{t=1}^{T}\left(x_t-S(\theta,m)_t\right)^2</div>
+
+        <p>Here, <span class="math">x</span> is the target audio, <span class="math">T</span> is its number of samples, <span class="math">S</span> is our synthesizer, <span class="math">\theta</span> is the preset, and <span class="math">m</span> is the MIDI input. Only the chosen entries of <span class="math">\theta</span> are optimized; the rest stay at their ground-truth values.</p>
+
+        <h3>Why use MSE for audio?</h3>
+
+        <p>Waveform MSE is generally a poor measure of perceptual similarity. It's extremely sensitive to phase and temporal alignment: two signals that sound almost identical can have a large MSE if one is shifted by just a few samples. This is particularly problematic for audio generation, where we often care more about how a sound is perceived than exact waveform correspondence.</p>
+
+        <p>However, our setting is a little different. Both the target and reconstructed audio come from the <strong>same deterministic synthesizer</strong>, with identical MIDI inputs, note timing, oscillator starting phase and noise realization. This removes many sources of mismatch, and we know that a parameter configuration capable of producing the exact target waveform exists.</p>
+
+        <p>That doesn't make the optimization problem trivial. Changes in parameters such as oscillator detuning can still produce large phase differences, and the loss can contain multiple local minima. But MSE provides a simple and inexpensive starting point to test whether gradients through the synthesizer are useful.</p>
+
+        <h3>Recovering the parameters</h3>
+
+        <p>I first optimized each parameter individually, keeping the others fixed at their ground-truth values. I then repeated the experiment with multiple parameters optimized simultaneously, making the task progressively more difficult.</p>
+
+        <p>The results were encouraging: <strong>for the tested preset, every parameter was recovered in at least one run</strong>. That is a useful sanity check, rather than a guarantee across all possible sounds. The figure below shows three examples from the single-parameter tests.</p>
+
+        <figure class="recovery-figure" id="parameter-recovery" aria-labelledby="recovery-caption">
+          <div class="recovery-legend" aria-label="Curve legend">
+            <span class="recovery-seed-a">Seed 123 · solid</span>
+            <span class="recovery-seed-b">Seed 456 · dashed</span>
+            <span class="recovery-seed-c">Seed 789 · dotted</span>
+          </div>
+          <div class="recovery-grid">
+            <div class="recovery-card">
+              <h4>Gain</h4>
+              <p class="recovery-target">Target: 0.5</p>
+              <img src="../../assets/recovery-gain.svg" width="380" height="320" loading="lazy" alt="Gain-only fitting: all three seed groups converge to near-zero waveform MSE.">
+              <p class="recovery-values">Recovered:<br><span class="recovery-seed-a">0.5</span> / <span class="recovery-seed-b">0.5</span> / <span class="recovery-seed-c">0.5</span></p>
+            </div>
+            <div class="recovery-card">
+              <h4>Detuning</h4>
+              <p class="recovery-target">Target: 12 cents</p>
+              <img src="../../assets/recovery-detune_cents.svg" width="380" height="320" loading="lazy" alt="Detuning-only fitting: seeds 123 and 789 recover 12 cents, while seed 456 stalls at 15.592 cents with MSE about 0.02235.">
+              <p class="recovery-values">Recovered (cents):<br><span class="recovery-seed-a">12</span> / <span class="recovery-seed-b">15.592</span> / <span class="recovery-seed-c">12</span></p>
+            </div>
+            <div class="recovery-card">
+              <h4>LFO rate</h4>
+              <p class="recovery-target">Target: 2 Hz</p>
+              <img src="../../assets/recovery-lfo_rate.svg" width="380" height="320" loading="lazy" alt="LFO-rate-only fitting: seed 123 recovers 2 Hz; seeds 456 and 789 stall around 1.708 Hz with MSE about 0.001084.">
+              <p class="recovery-values">Recovered (Hz):<br><span class="recovery-seed-a">2</span> / <span class="recovery-seed-b">1.708</span> / <span class="recovery-seed-c">1.708</span></p>
+            </div>
+          </div>
+          <figcaption id="recovery-caption">Actual waveform-MSE histories, with one parameter optimized at a time. Each curve shows the lowest loss among four random restarts at each step. Recovered values come from the best saved iterate; some curves overlap.</figcaption>
+          <details class="recovery-method">
+            <summary>Experiment settings and plotted data</summary>
+            <p>One six-second C4 note at 24 kHz, held for four seconds; all other preset values fixed. Each seed uses four restarts and 500 Adam steps at a learning rate of 0.08. These diagnostic runs use sample-wise LFO coefficient updates, rather than the synth's default 200 Hz. The vertical axis is logarithmic; losses below <span class="math">10^{-12}</span> share the bottom display level. Values are rounded for readability. <a href="../../assets/parameter-recovery.csv">Download the original loss measurements</a>.</p>
+          </details>
+        </figure>
+
+        <p>Gain converges reliably here, while detuning and LFO rate sometimes get stuck even when every other parameter is correct. A separate scan of the LFO-rate loss confirmed a local minimum near 1.708 Hz, away from the correct 2 Hz. Optimizing multiple parameters together adds further ambiguity, since changes in one parameter can be compensated by changes in another.</p>
+
+        <p>I also explored soft waveform selection and hard selection with a straight-through estimator. Soft selection lets the optimizer blend waveforms rather than immediately committing to one choice. It became my preferred approach in the later network experiments, which I'll return to below. For these fitting tests, the saved preset is also evaluated with discrete oscillator choices: a good soft mixture doesn't necessarily remain a good match after taking the argmax.</p>
+
+        <h3>What did we learn?</h3>
+
+        <p>These experiments gave me confidence that the differentiable synthesizer was working as intended, but also highlighted an important limitation: <strong>a useful gradient doesn't guarantee that gradient descent will find the right parameters</strong>.</p>
+
+        <p>Parameter recovery and audio reconstruction are also different goals. Multiple presets can produce similar waveforms, so a low audio loss doesn't guarantee recovery of the original values. Both matter when interpreting these experiments.</p>
+
+        <p>Fortunately, our ultimate goal isn't to optimize a new set of parameters from scratch for every sound. Instead, we want to train a neural network that predicts them directly. By learning from many examples, it might provide a useful starting point without requiring a separate optimization for each sound.</p>
+
+        <p>Before moving to audio reconstruction losses, though, I wanted to answer a simpler question: can a neural network learn to recover the original synthesizer parameters directly from an audio representation?</p>
       </section>
     </article>
   </main>

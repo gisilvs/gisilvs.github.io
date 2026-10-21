@@ -259,3 +259,25 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .code-function { color: #2166a0; }
 .code-namespace { color: #75418c; }
 .code-operator { color: #795b2b; }
+
+/* Direct-fitting results: three small plots, with raw data available below. */
+.recovery-section h3 { margin: 36px 0 18px; font: normal 25px/1.4 Georgia, serif; }
+.recovery-figure { margin: 32px 0; }
+.recovery-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; margin-bottom: 24px; font-size: 12px; }
+.recovery-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.recovery-card { text-align: center; }
+.recovery-card h4 { margin: 0 0 3px; font-size: 16px; font-weight: 600; }
+.recovery-card .recovery-target { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+.recovery-card img { display: block; width: 100%; height: auto; }
+.recovery-card .recovery-values { margin: 0; font-size: 13px; line-height: 1.8; }
+.recovery-seed-a { color: #347358; }
+.recovery-seed-b { color: #b4613c; }
+.recovery-seed-c { color: #527d9a; }
+.recovery-figure figcaption { margin-top: 22px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.recovery-method { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.recovery-method summary { cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+.recovery-method p { margin-top: 12px; font-size: 13px; }
+@media (max-width: 720px) {
+  .recovery-grid { grid-template-columns: 1fr; gap: 30px; }
+  .recovery-card { max-width: 360px; width: 100%; margin: 0 auto; }
+}
