@@ -334,7 +334,7 @@ tail <span class="code-operator">=</span> level_at_release <span class="code-ope
   <li><span class="math">x[n]</span> is the input audio amplitude at sample <span class="math">n</span>, before filtering.</li>
   <li><span class="math">y[n]</span> is the output audio amplitude at that same sample, after filtering.</li>
   <li><span class="math">b_0,b_1,b_2</span> are weights applied to the current input sample and its two predecessors.</li>
-  <li><span class="math">a_1,a_2</span> are weights applied to the two previous <em>output</em> samples.</li>
+  <li><span class="math">a_0</span> multiplies the current output; <span class="math">a_1,a_2</span> weight the two previous <em>output</em> samples.</li>
 </ul>
 
 <p>In particular, <span class="math">x[n-1]</span> means the input one sample ago, and <span class="math">y[n-2]</span> means the output two samples ago. The subscripts on <span class="math">a</span> and <span class="math">b</span> label the weights; the terms in square brackets pick a moment in the audio.</p>
@@ -342,7 +342,7 @@ tail <span class="code-operator">=</span> level_at_release <span class="code-ope
 <p>The filter computes each output sample using this rule:</p>
 
 <div class="math display-math">\begin{aligned}
-y[n] ={}&amp; b_0 x[n] + b_1 x[n-1] + b_2 x[n-2]\\
+a_0 y[n] ={}&amp; b_0 x[n] + b_1 x[n-1] + b_2 x[n-2]\\
        &amp;- a_1 y[n-1] - a_2 y[n-2]
 \end{aligned}</div>
 
@@ -352,7 +352,18 @@ y[n] ={}&amp; b_0 x[n] + b_1 x[n-1] + b_2 x[n-2]\\
 
 <p>In Ava, the cutoff follows the played pitch to keep a similar effect across the keyboard. We express it as an octave offset from the note's frequency, then convert it to hertz before calculating the filter coefficients.</p>
 
-<p>With the LFO switched off, cutoff and Q stay fixed throughout the note, so we only need one set of coefficients. The following code calculates them from <code>cutoff_hz</code> and <code>q</code>:</p>
+<p>With the LFO switched off, cutoff and Q stay fixed throughout the note, so we only need one set of coefficients. For cutoff <span class="math">f_c</span>, sample rate <span class="math">f_s</span> and resonance <span class="math">Q</span>, we first calculate:</p>
+
+<div class="math display-math">\omega=\frac{2\pi f_c}{f_s},\qquad \alpha=\frac{\sin\omega}{2Q}</div>
+
+<p>The low-pass coefficients are then:</p>
+
+<div class="math display-math">\begin{aligned}
+b_0=b_2&amp;=\frac{1-\cos\omega}{2}, &amp; b_1&amp;=1-\cos\omega\\
+a_0&amp;=1+\alpha, &amp; a_1&amp;=-2\cos\omega, &amp; a_2&amp;=1-\alpha
+\end{aligned}</div>
+
+<p>The code below evaluates these expressions:</p>
 
 <p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Convert cutoff Hz to radians per sample.</span>
@@ -364,8 +375,6 @@ a <span class="code-operator">=</span> <span class="code-namespace">torch</span>
 b <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">cat</span><span class="code-operator">(</span><span class="code-operator">[</span><span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> cosine<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-number">2</span><span class="code-operator">,</span> <span class="code-number">1</span> <span class="code-operator">-</span> cosine<span class="code-operator">,</span> <span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> cosine<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-number">2</span><span class="code-operator">]</span><span class="code-operator">,</span> dim<span class="code-operator">=</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">)</span>
 <span class="code-comment"># Divide every coefficient by a0, so the new a0 is 1.</span>
 <span class="code-keyword">return</span> a <span class="code-operator">/</span> a<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-number">1</span><span class="code-operator">]</span><span class="code-operator">,</span> b <span class="code-operator">/</span> a<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-number">1</span><span class="code-operator">]</span></code></pre>
-
-<p>The arrays contain <span class="math">[a_0,a_1,a_2]</span> and <span class="math">[b_0,b_1,b_2]</span>. Dividing both by <span class="math">a_0</span> makes its value one, giving the recurrence shown above.</p>
 
 <p>We can then pass the audio and coefficients to <code>torchaudio.functional.lfilter</code>, which handles the previous-input and previous-output terms for us:</p>
 
@@ -382,11 +391,28 @@ filtered <span class="code-operator">=</span> <span class="code-function">lfilte
 
 <h4>Adding LFO modulation</h4>
 
-<p>The LFO moves the cutoff up and down. Its rate controls how fast it moves, and its depth controls how far. As the cutoff changes, we need new values for <span class="math">a</span> and <span class="math">b</span>.</p>
+<p>The LFO moves the cutoff up and down. Its rate controls how fast it moves, and its depth controls how far. Each time the cutoff changes, we calculate new <span class="math">a</span> and <span class="math">b</span> coefficients using the same formulas above.</p>
 
 <p>We update those coefficients at <strong>200 Hz</strong>: every 5 milliseconds, or every 120 audio samples at 24 kHz. Between updates, the same coefficients remain in use while the filter continues producing audio at the full sample rate.</p>
 
-<p>For this changing-coefficient case, we calculate the input terms in PyTorch and use <strong><a href="https://github.com/DiffAPF/torchlpc">TorchLPC</a></strong> for the recursive output terms and their gradients. The filter keeps its state across updates, so changing the cutoff does not restart it. Gradients can then flow back to the LFO rate and depth as well.</p>
+<p>The following shows the operations for a single update. We start from the preset's base cutoff offset, add the LFO's contribution, convert to hertz and recalculate the coefficients. The full implementation evaluates the update times together in a batch.</p>
+
+<p class="code-source">Simplified from <code>synth/synth.py</code> and <code>synth/filters/lowpass.py</code>; batching omitted</p>
+<pre><code class="language-python"><span class="code-comment"># For one update time; the full implementation batches all update times.</span>
+offset <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">as_tensor</span><span class="code-operator">(</span>cutoff_octaves<span class="code-operator">,</span> device<span class="code-operator">=</span>freq<span class="code-operator">.</span>device<span class="code-operator">,</span> dtype<span class="code-operator">=</span><span class="code-namespace">torch</span><span class="code-operator">.</span>float64<span class="code-operator">)</span>
+<span class="code-comment"># Add the LFO&#x27;s octave offset to the preset&#x27;s base offset.</span>
+offset <span class="code-operator">=</span> offset <span class="code-operator">+</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">lfo</span><span class="code-operator">(</span>time<span class="code-operator">,</span> rate<span class="code-operator">,</span> depth<span class="code-operator">)</span>
+cutoff_hz <span class="code-operator">=</span> freq<span class="code-operator">.</span><span class="code-function">double</span><span class="code-operator">(</span><span class="code-operator">)</span> <span class="code-operator">*</span> <span class="code-number">2</span> <span class="code-operator">**</span> offset
+<span class="code-comment"># Recalculate a and b using exactly the same coefficient function as before.</span>
+a<span class="code-operator">,</span> b <span class="code-operator">=</span> <span class="code-namespace">self</span><span class="code-operator">.</span>lowpass<span class="code-operator">.</span><span class="code-function">coefficients</span><span class="code-operator">(</span>cutoff_hz<span class="code-operator">,</span> q<span class="code-operator">)</span></code></pre>
+
+<p><code>self.lfo(time, rate, depth)</code> returns <code>depth * sin(2π * rate * time)</code>, an offset in octaves. We therefore change the cutoff without changing the oscillator's pitch.</p>
+
+<h4>Why TorchLPC instead of lfilter?</h4>
+
+<p><a href="https://docs.pytorch.org/audio/stable/generated/torchaudio.functional.lfilter.html"><code>torchaudio.functional.lfilter</code></a> applies one fixed coefficient set to each filter for the entire input waveform. Its batch option runs several such filters; it does not let the coefficients change over time within a filter.</p>
+
+<p>Calling it separately on short blocks would require us to handle the filter history between calls. Instead, <strong><a href="https://github.com/DiffAPF/torchlpc">TorchLPC</a></strong> accepts coefficients that vary at each sample and differentiates through that changing filter. We repeat each coefficient set over its 120-sample interval, calculate the input terms in PyTorch, and let TorchLPC handle the recursive output terms in one pass. The history continues across updates, and gradients can flow back to the LFO rate and depth.</p>
 
 <h3 id="drive-gain-and-putting-everything-together">Drive, gain, and putting everything together</h3>
 
