@@ -6,7 +6,7 @@
   <meta name="description" content="Building Ava, a differentiable synthesizer that turns natural language descriptions into playable presets.">
   <title>Ava: Text-to-Synth — Gianluigi Silvestri</title>
   <link rel="canonical" href="https://gisilvs.github.io/blog/ava/">
-  <link rel="stylesheet" href="../../style.css?v=explained-oscillators">
+  <link rel="stylesheet" href="../../style.css?v=filter-explained">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
   <script defer src="deep-dive.js"></script>
@@ -176,20 +176,20 @@
 <p>The synth builds that vector once for the clip. Here, <code>duration</code> is in seconds and <code>self.sample_rate</code> is the number of samples per second:</p>
 
 <p class="code-source">From <code>synth/synth.py</code>, with explanatory comments</p>
-<pre><code class="language-python"># Sample indices 0, 1, ..., N-1 become times in seconds after division.
-time = torch.arange(round(duration * self.sample_rate),
-                    device=freq.device, dtype=torch.float32) / self.sample_rate
-# Match the frequency tensor&#x27;s dtype; time still has shape [samples].
-time = time.to(freq)</code></pre>
+<pre><code class="language-python"><span class="code-comment"># Sample indices 0, 1, ..., N-1 become times in seconds after division.</span>
+time <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">arange</span><span class="code-operator">(</span><span class="code-function">round</span><span class="code-operator">(</span>duration <span class="code-operator">*</span> <span class="code-namespace">self</span><span class="code-operator">.</span>sample_rate<span class="code-operator">)</span><span class="code-operator">,</span>
+                    device<span class="code-operator">=</span>freq<span class="code-operator">.</span>device<span class="code-operator">,</span> dtype<span class="code-operator">=</span><span class="code-namespace">torch</span><span class="code-operator">.</span>float32<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-namespace">self</span><span class="code-operator">.</span>sample_rate
+<span class="code-comment"># Match the frequency tensor&#x27;s dtype; time still has shape [samples].</span>
+time <span class="code-operator">=</span> time<span class="code-operator">.</span><span class="code-function">to</span><span class="code-operator">(</span>freq<span class="code-operator">)</span></code></pre>
 
 <p>Multiplying each time by <code>freq</code> tells us how many cycles have elapsed. Multiplying again by <span class="math">2\pi</span> converts cycles to an angle in radians. Finally, sine maps that angle to an amplitude between −1 and 1. At 200 Hz and 24 kHz, this takes 120 samples per cycle.</p>
 
 <p class="code-source">From <code>synth/oscillators/sine.py</code>, with explanatory comments</p>
-<pre><code class="language-python">def __call__(self, freq, time):
-    # freq: [batch, 1]; time: [samples].
-    # Broadcasting evaluates every time point at each batch element's frequency.
-    # 2*pi*freq*time is the phase in radians; initial phase is zero.
-    return torch.sin(2 * torch.pi * freq * time)  # [batch, samples]</code></pre>
+<pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">__call__</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> freq<span class="code-operator">,</span> time<span class="code-operator">)</span><span class="code-operator">:</span>
+    <span class="code-comment"># freq: [batch, 1]; time: [samples].</span>
+    <span class="code-comment"># Broadcasting evaluates every time point at each batch element&#x27;s frequency.</span>
+    <span class="code-comment"># 2*pi*freq*time is the phase in radians; initial phase is zero.</span>
+    <span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">sin</span><span class="code-operator">(</span><span class="code-number">2</span> <span class="code-operator">*</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>pi <span class="code-operator">*</span> freq <span class="code-operator">*</span> time<span class="code-operator">)</span>  <span class="code-comment"># [batch, samples]</span></code></pre>
 
 <p>Every batch element can therefore have its own pitch, while sharing the same sampling times. For now there is no phase-offset control: all oscillators start at phase zero.</p>
 
@@ -206,16 +206,16 @@ time = time.to(freq)</code></pre>
 <p>The square-wave code evaluates the harmonics together. Below, <code>B</code> is the batch size, <code>N</code> is the number of audio samples, and <code>H = 16</code> is the number of odd harmonics from 1 to 31. Extra dimensions let PyTorch combine each frequency, harmonic and time without a Python loop:</p>
 
 <p class="code-source">From <code>synth/oscillators/square.py</code>, with explanatory comments</p>
-<pre><code class="language-python"># Odd harmonic numbers: 1, 3, ..., 31. Initially [H].
-harmonics = torch.arange(1, 32, 2, device=freq.device, dtype=freq.dtype)
-harmonics = harmonics.view(1, -1, 1)  # [1, H, 1]
-freq = freq.unsqueeze(1)             # [B, 1, 1]
-time = time.unsqueeze(-2)            # [1, N], broadcast as [1, 1, N]
-allowed = freq * harmonics &lt; self.sample_rate / 2  # [B, H, 1]
-# One sine wave per harmonic, evaluated at every sample time.
-waves = torch.sin(2 * torch.pi * freq * harmonics * time)  # [B, H, N]
-# Mask, weight by 1/harmonic, then sum H to produce [B, N].
-return 4 / torch.pi * (allowed * waves / harmonics).sum(dim=1)</code></pre>
+<pre><code class="language-python"><span class="code-comment"># Odd harmonic numbers: 1, 3, ..., 31. Initially [H].</span>
+harmonics <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">arange</span><span class="code-operator">(</span><span class="code-number">1</span><span class="code-operator">,</span> <span class="code-number">32</span><span class="code-operator">,</span> <span class="code-number">2</span><span class="code-operator">,</span> device<span class="code-operator">=</span>freq<span class="code-operator">.</span>device<span class="code-operator">,</span> dtype<span class="code-operator">=</span>freq<span class="code-operator">.</span>dtype<span class="code-operator">)</span>
+harmonics <span class="code-operator">=</span> harmonics<span class="code-operator">.</span><span class="code-function">view</span><span class="code-operator">(</span><span class="code-number">1</span><span class="code-operator">,</span> <span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">)</span>  <span class="code-comment"># [1, H, 1]</span>
+freq <span class="code-operator">=</span> freq<span class="code-operator">.</span><span class="code-function">unsqueeze</span><span class="code-operator">(</span><span class="code-number">1</span><span class="code-operator">)</span>             <span class="code-comment"># [B, 1, 1]</span>
+time <span class="code-operator">=</span> time<span class="code-operator">.</span><span class="code-function">unsqueeze</span><span class="code-operator">(</span><span class="code-operator">-</span><span class="code-number">2</span><span class="code-operator">)</span>            <span class="code-comment"># [1, N], broadcast as [1, 1, N]</span>
+allowed <span class="code-operator">=</span> freq <span class="code-operator">*</span> harmonics <span class="code-operator">&lt;</span> <span class="code-namespace">self</span><span class="code-operator">.</span>sample_rate <span class="code-operator">/</span> <span class="code-number">2</span>  <span class="code-comment"># [B, H, 1]</span>
+<span class="code-comment"># One sine wave per harmonic, evaluated at every sample time.</span>
+waves <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">sin</span><span class="code-operator">(</span><span class="code-number">2</span> <span class="code-operator">*</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>pi <span class="code-operator">*</span> freq <span class="code-operator">*</span> harmonics <span class="code-operator">*</span> time<span class="code-operator">)</span>  <span class="code-comment"># [B, H, N]</span>
+<span class="code-comment"># Mask, weight by 1/harmonic, then sum H to produce [B, N].</span>
+<span class="code-keyword">return</span> <span class="code-number">4</span> <span class="code-operator">/</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>pi <span class="code-operator">*</span> <span class="code-operator">(</span>allowed <span class="code-operator">*</span> waves <span class="code-operator">/</span> harmonics<span class="code-operator">)</span><span class="code-operator">.</span><span class="code-function">sum</span><span class="code-operator">(</span>dim<span class="code-operator">=</span><span class="code-number">1</span><span class="code-operator">)</span></code></pre>
 
 <p>Before the final sum, <code>waves</code> contains a separate sine wave for every batch element and harmonic. Dividing by <code>harmonics</code> makes higher harmonics quieter; <code>allowed</code> removes those above the frequency limit. Summing dimension 1 combines the harmonics into one audio signal per batch element.</p>
 
@@ -239,11 +239,11 @@ p_k=\operatorname{softmax}(z)_k</div>
 <p>For soft selection, the caller turns four logits into four probabilities using softmax, then passes them to the oscillator bank as <code>selection</code>. Each oscillator returns <code>[batch, samples]</code> audio. We stack those signals along a new axis, multiply each one by its probability, and sum over the four choices:</p>
 
 <p class="code-source">From <code>synth/oscillators/bank.py</code></p>
-<pre><code class="language-python"># Keep the four candidate waveforms on a separate axis: [batch, 4, samples].
-waves = torch.stack([osc(freq, time) for osc in self.oscillators], dim=1)
-# selection: [batch, 4] -&gt; [batch, 4, 1], sharing each weight across time.
-# Sum the waveform axis to return [batch, samples].
-return (selection.unsqueeze(-1) * waves).sum(dim=1)</code></pre>
+<pre><code class="language-python"><span class="code-comment"># Keep the four candidate waveforms on a separate axis: [batch, 4, samples].</span>
+waves <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">stack</span><span class="code-operator">(</span><span class="code-operator">[</span><span class="code-function">osc</span><span class="code-operator">(</span>freq<span class="code-operator">,</span> time<span class="code-operator">)</span> <span class="code-keyword">for</span> osc <span class="code-keyword">in</span> <span class="code-namespace">self</span><span class="code-operator">.</span>oscillators<span class="code-operator">]</span><span class="code-operator">,</span> dim<span class="code-operator">=</span><span class="code-number">1</span><span class="code-operator">)</span>
+<span class="code-comment"># selection: [batch, 4] -&gt; [batch, 4, 1], sharing each weight across time.</span>
+<span class="code-comment"># Sum the waveform axis to return [batch, samples].</span>
+<span class="code-keyword">return</span> <span class="code-operator">(</span>selection<span class="code-operator">.</span><span class="code-function">unsqueeze</span><span class="code-operator">(</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">)</span> <span class="code-operator">*</span> waves<span class="code-operator">)</span><span class="code-operator">.</span><span class="code-function">sum</span><span class="code-operator">(</span>dim<span class="code-operator">=</span><span class="code-number">1</span><span class="code-operator">)</span></code></pre>
 
 <p>The bank's order is sine, square, sawtooth, triangle. Weights of <code>[1, 0, 0, 0]</code> therefore give a sine wave, while <code>[0.5, 0.5, 0, 0]</code> blend sine and square equally. This choice belongs to a single oscillator; the separate mix control later combines oscillator A with oscillator B.</p>
 
@@ -253,11 +253,11 @@ return (selection.unsqueeze(-1) * waves).sum(dim=1)</code></pre>
 
 <p>For one oscillator, the fitting code expresses this as:</p>
 
-<pre><code class="language-python"># Turn four logits into probabilities, then make a one-hot hard choice.
-probability = raw.softmax(dim=-1)
-hard = torch.nn.functional.one_hot(probability.argmax(-1), 4).to(probability)
-# The bracket is zero in the forward pass, but carries softmax gradients.
-controls[name] = hard + (probability - probability.detach())</code></pre>
+<pre><code class="language-python"><span class="code-comment"># Turn four logits into probabilities, then make a one-hot hard choice.</span>
+probability <span class="code-operator">=</span> raw<span class="code-operator">.</span><span class="code-function">softmax</span><span class="code-operator">(</span>dim<span class="code-operator">=</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">)</span>
+hard <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>nn<span class="code-operator">.</span>functional<span class="code-operator">.</span><span class="code-function">one_hot</span><span class="code-operator">(</span>probability<span class="code-operator">.</span><span class="code-function">argmax</span><span class="code-operator">(</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">)</span><span class="code-operator">,</span> <span class="code-number">4</span><span class="code-operator">)</span><span class="code-operator">.</span><span class="code-function">to</span><span class="code-operator">(</span>probability<span class="code-operator">)</span>
+<span class="code-comment"># The bracket is zero in the forward pass, but carries softmax gradients.</span>
+controls<span class="code-operator">[</span>name<span class="code-operator">]</span> <span class="code-operator">=</span> hard <span class="code-operator">+</span> <span class="code-operator">(</span>probability <span class="code-operator">-</span> probability<span class="code-operator">.</span><span class="code-function">detach</span><span class="code-operator">(</span><span class="code-operator">)</span><span class="code-operator">)</span></code></pre>
 
 <p>Here, <code>raw</code> contains the four logits. <code>detach()</code> keeps a tensor's values but removes its connection to the gradient computation. Subtracting the detached probabilities therefore changes nothing in the forward pass: the synth receives only <code>hard</code>. During backpropagation, however, gradients still flow through the non-detached probabilities. This is a surrogate gradient, not the derivative of the hard choice.</p>
 
@@ -274,11 +274,11 @@ controls[name] = hard + (probability - probability.detach())</code></pre>
 <p>The code first renders oscillator B at its shifted frequency, then crossfades between A and B. A mix of zero uses only A, one uses only B, and 0.5 gives equal contributions:</p>
 
 <p class="code-source">From <code>synth/synth.py</code>, with explanatory comments</p>
-<pre><code class="language-python"># Convert the cents offset to a frequency ratio for oscillator B.
-freq_b = freq * 2 ** (detune_cents / 1200)
-wave_b = self.oscillators(freq_b, time, oscillator_b)
-# wave is oscillator A here; mix controls their relative contribution.
-wave = (1 - mix) * wave + mix * wave_b</code></pre>
+<pre><code class="language-python"><span class="code-comment"># Convert the cents offset to a frequency ratio for oscillator B.</span>
+freq_b <span class="code-operator">=</span> freq <span class="code-operator">*</span> <span class="code-number">2</span> <span class="code-operator">**</span> <span class="code-operator">(</span>detune_cents <span class="code-operator">/</span> <span class="code-number">1200</span><span class="code-operator">)</span>
+wave_b <span class="code-operator">=</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">oscillators</span><span class="code-operator">(</span>freq_b<span class="code-operator">,</span> time<span class="code-operator">,</span> oscillator_b<span class="code-operator">)</span>
+<span class="code-comment"># wave is oscillator A here; mix controls their relative contribution.</span>
+wave <span class="code-operator">=</span> <span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> mix<span class="code-operator">)</span> <span class="code-operator">*</span> wave <span class="code-operator">+</span> mix <span class="code-operator">*</span> wave_b</code></pre>
 
 <p>After mixing the oscillators, a separate noise mix blends in white noise before the filter.</p>
 
@@ -291,37 +291,37 @@ wave = (1 - mix) * wave + mix * wave_b</code></pre>
 <p>To implement the transitions, we first need a curve that maps <em>progress through a stage</em> to a level between zero and one. For example, <code>time / attack</code> is zero at note-on and one at the end of attack. The helper below bends that progress into a normalized exponential curve:</p>
 
 <p class="code-source">From <code>synth/envelopes/adsr.py</code>, with explanatory comments</p>
-<pre><code class="language-python">def curve(self, progress):
-    # Before a stage starts, progress is 0; after it ends, progress is 1.
-    progress = progress.clamp(0, 1)
-    # self.curvature = 4.0. Normalize the exponential to run from 0 to 1.
-    curve = -torch.expm1(-self.curvature * progress) / -math.expm1(-self.curvature)
-    # Make completed transitions exactly 1, including in finite precision.
-    return torch.where(progress &gt;= 1, torch.ones_like(curve), curve)</code></pre>
+<pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">curve</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> progress<span class="code-operator">)</span><span class="code-operator">:</span>
+    <span class="code-comment"># Before a stage starts, progress is 0; after it ends, progress is 1.</span>
+    progress <span class="code-operator">=</span> progress<span class="code-operator">.</span><span class="code-function">clamp</span><span class="code-operator">(</span><span class="code-number">0</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">)</span>
+    <span class="code-comment"># self.curvature = 4.0. Normalize the exponential to run from 0 to 1.</span>
+    curve <span class="code-operator">=</span> <span class="code-operator">-</span><span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">expm1</span><span class="code-operator">(</span><span class="code-operator">-</span><span class="code-namespace">self</span><span class="code-operator">.</span>curvature <span class="code-operator">*</span> progress<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-operator">-</span><span class="code-namespace">math</span><span class="code-operator">.</span><span class="code-function">expm1</span><span class="code-operator">(</span><span class="code-operator">-</span><span class="code-namespace">self</span><span class="code-operator">.</span>curvature<span class="code-operator">)</span>
+    <span class="code-comment"># Make completed transitions exactly 1, including in finite precision.</span>
+    <span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">where</span><span class="code-operator">(</span>progress <span class="code-operator">&gt;=</span> <span class="code-number">1</span><span class="code-operator">,</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">ones_like</span><span class="code-operator">(</span>curve<span class="code-operator">)</span><span class="code-operator">,</span> curve<span class="code-operator">)</span></code></pre>
 
 <p><code>expm1(x)</code> computes <span class="math">e^x-1</span> accurately even near zero. The expression above is <span class="math">(1-e^{-4p})/(1-e^{-4})</span>, where <span class="math">p</span> is clamped progress. The denominator makes the endpoint one. The fixed curvature of 4 determines the bend: halfway through the stage, this curve has reached about 88% of its endpoint.</p>
 
 <p>We can now use that same curve for both attack and decay. During attack, it directly gives the amplitude. After attack, we measure progress through decay and use the curve to remove a fraction of the difference between one and sustain:</p>
 
 <p class="code-source">From <code>synth/envelopes/adsr.py</code>, with explanatory comments</p>
-<pre><code class="language-python">def held_level(self, time, attack, decay, sustain):
-    attack_level = self.curve(time / attack)  # Progress through attack.
-    # Decay begins at time = attack, and drops by (1 - sustain).
-    decay_level = 1 - (1 - sustain) * self.curve((time - attack) / decay)
-    return torch.where(time &lt; attack, attack_level, decay_level)</code></pre>
+<pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">held_level</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> time<span class="code-operator">,</span> attack<span class="code-operator">,</span> decay<span class="code-operator">,</span> sustain<span class="code-operator">)</span><span class="code-operator">:</span>
+    attack_level <span class="code-operator">=</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">curve</span><span class="code-operator">(</span>time <span class="code-operator">/</span> attack<span class="code-operator">)</span>  <span class="code-comment"># Progress through attack.</span>
+    <span class="code-comment"># Decay begins at time = attack, and drops by (1 - sustain).</span>
+    decay_level <span class="code-operator">=</span> <span class="code-number">1</span> <span class="code-operator">-</span> <span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> sustain<span class="code-operator">)</span> <span class="code-operator">*</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">curve</span><span class="code-operator">(</span><span class="code-operator">(</span>time <span class="code-operator">-</span> attack<span class="code-operator">)</span> <span class="code-operator">/</span> decay<span class="code-operator">)</span>
+    <span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">where</span><span class="code-operator">(</span>time <span class="code-operator">&lt;</span> attack<span class="code-operator">,</span> attack_level<span class="code-operator">,</span> decay_level<span class="code-operator">)</span></code></pre>
 
 <p>At the start of decay, its progress is zero, so the level is still one. At its end, the curve reaches one and the level becomes <code>sustain</code>. Because progress stays clamped at one afterwards, the same expression keeps the note at its sustain level until note-off.</p>
 
 <p>Release needs one more detail: the note might stop during attack or decay. We first evaluate the held-note envelope at the exact note-off time, then fade from <em>that level</em> to zero. This avoids jumping to the sustain level when the note is released early:</p>
 
 <p class="code-source">From <code>synth/envelopes/adsr.py</code>, with explanatory comments</p>
-<pre><code class="language-python"># Amplitude while the key is held, evaluated at every audio sample.
-held = self.held_level(time, attack, decay, sustain)
-# Evaluate the same function at note-off, even if attack/decay is unfinished.
-level_at_release = self.held_level(note_press_duration, attack, decay, sustain)
-# Fade that level to zero over the release duration.
-tail = level_at_release * (1 - self.curve((time - note_press_duration) / release))
-return torch.where(time &lt; note_press_duration, held, tail)</code></pre>
+<pre><code class="language-python"><span class="code-comment"># Amplitude while the key is held, evaluated at every audio sample.</span>
+held <span class="code-operator">=</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">held_level</span><span class="code-operator">(</span>time<span class="code-operator">,</span> attack<span class="code-operator">,</span> decay<span class="code-operator">,</span> sustain<span class="code-operator">)</span>
+<span class="code-comment"># Evaluate the same function at note-off, even if attack/decay is unfinished.</span>
+level_at_release <span class="code-operator">=</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">held_level</span><span class="code-operator">(</span>note_press_duration<span class="code-operator">,</span> attack<span class="code-operator">,</span> decay<span class="code-operator">,</span> sustain<span class="code-operator">)</span>
+<span class="code-comment"># Fade that level to zero over the release duration.</span>
+tail <span class="code-operator">=</span> level_at_release <span class="code-operator">*</span> <span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">curve</span><span class="code-operator">(</span><span class="code-operator">(</span>time <span class="code-operator">-</span> note_press_duration<span class="code-operator">)</span> <span class="code-operator">/</span> release<span class="code-operator">)</span><span class="code-operator">)</span>
+<span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">where</span><span class="code-operator">(</span>time <span class="code-operator">&lt;</span> note_press_duration<span class="code-operator">,</span> held<span class="code-operator">,</span> tail<span class="code-operator">)</span></code></pre>
 
 <p>The release progress is <code>(time - note_press_duration) / release</code>. Its curve rises from zero to one, so <code>1 - curve</code> falls from one to zero. Multiplying by <code>level_at_release</code> gives a tail that starts exactly where the held note ended. The final <code>torch.where</code> uses the held envelope before note-off and this tail afterwards.</p>
 
@@ -334,81 +334,151 @@ return torch.where(time &lt; note_press_duration, held, tail)</code></pre>
 
 <h3 id="low-pass-filter-and-lfo-modulation">Low-pass filter and LFO modulation</h3>
 
-<p>The filter was probably the most interesting component to implement.</p>
+<p>The filter was probably the most interesting (and hardest) component to implement.</p>
 
-<p>Ava uses a second-order resonant low-pass filter, also known as a <strong>biquad filter</strong>. It attenuates frequencies above a specified cutoff, while the resonance parameter controls the emphasis around that cutoff.</p>
+<p>Ava uses a second-order resonant low-pass filter, also known as a <strong>biquad</strong>. A low-pass filter lets lower frequencies through and reduces higher ones. Its <em>cutoff</em>, measured in hertz, controls where it transitions between those two regions. Resonance, controlled by the dimensionless value <span class="math">Q</span>, emphasizes the frequencies around the cutoff. Higher Q creates a stronger emphasis.</p>
 
-<p>A biquad filter can be expressed using the following recurrence:</p>
+<h4>A filter, one sample at a time</h4>
+
+<p>We already have an input waveform from the oscillators and noise. The filter turns it into a new waveform. To describe that process, we need a few symbols:</p>
+
+<ul>
+  <li><span class="math">n</span> is the <strong>sample index</strong>: 0, 1, 2, and so on. At 24 kHz, we advance by one sample every <span class="math">1/24000</span> seconds.</li>
+  <li><span class="math">x[n]</span> is the input audio amplitude at sample <span class="math">n</span>, before filtering.</li>
+  <li><span class="math">y[n]</span> is the output audio amplitude at that same sample, after filtering.</li>
+  <li><span class="math">b_0,b_1,b_2</span> are weights applied to the current input sample and its two predecessors.</li>
+  <li><span class="math">a_1,a_2</span> are weights applied to the two previous <em>output</em> samples.</li>
+</ul>
+
+<p>In particular, <span class="math">x[n-1]</span> means the input one sample ago, and <span class="math">y[n-2]</span> means the output two samples ago. The subscripts on <span class="math">a</span> and <span class="math">b</span> label the weights; the terms in square brackets pick a moment in the audio.</p>
+
+<p>The filter computes each output sample using this rule:</p>
 
 <div class="math display-math">\begin{aligned}
 y[n] ={}&amp; b_0 x[n] + b_1 x[n-1] + b_2 x[n-2]\\
        &amp;- a_1 y[n-1] - a_2 y[n-2]
 \end{aligned}</div>
 
-<p>The coefficients depend on the cutoff frequency and resonance Q. For a modulated filter, each coefficient is time-dependent; the recurrence uses the coefficient values for the current sample.</p>
+<p>Read the first line as “take a weighted combination of the current input and the two preceding inputs.” Then subtract the weighted previous outputs on the second line. The coefficients themselves can be positive or negative; the minus signs are part of the way this filter is written.</p>
 
-<p>Unlike these oscillators and envelopes, this biquad is recursive: each output sample depends not only on the input, but also on previous output samples. This makes it harder to implement efficiently using standard vectorized PyTorch operations.</p>
+<p>We begin with zero history before the clip. After calculating <span class="math">y[0]</span>, we can use it to calculate <span class="math">y[1]</span>, then use those results for <span class="math">y[2]</span>, and continue. This dependence on earlier outputs is what makes the filter <strong>recursive</strong>.</p>
 
-<p>Things become even more complicated when we introduce the LFO.</p>
+<p>Those five weights are not five independent preset controls. We calculate them from the desired cutoff and resonance. Keeping cutoff and Q fixed gives one set of weights for the note. Moving the cutoff means recalculating them as the note plays.</p>
 
-<p>The LFO periodically modulates the filter cutoff, creating movement in the sound. In Ava, the modulation follows a sinusoidal curve, with its rate and depth controlled by two additional parameters. The depth is expressed in octaves, so the cutoff varies proportionally rather than by a fixed number of hertz:</p>
+<h4>Moving the cutoff with an LFO</h4>
 
-<div class="math display-math">f_c(t) = f_{\text{base}}\,
-2^{d\sin(2\pi f_{\text{LFO}}t)}</div>
+<p>An LFO is a <em>low-frequency oscillator</em>. Here, its output does not become audible audio directly: it moves the filter cutoff up and down. Its <strong>rate</strong> says how many complete movements happen per second, while its <strong>depth</strong> says how far the cutoff moves.</p>
 
-<p>Here, the base cutoff is the played note&#x27;s frequency shifted by <code>cutoff_octaves</code>. Both the base offset and LFO depth are measured in octaves:</p>
+<p>First, consider the cutoff with the LFO switched off. In Ava we set it relative to the played note. The parameter <code>cutoff_octaves</code> says how many octaves above or below the note to place the cutoff. This changes the filter, not the oscillator's pitch. Since one octave means a factor of two in frequency:</p>
 
-<pre><code class="language-python">update_times = time[::self.lfo_block_size]
-offset = offset + self.lfo(update_times, rate, depth)
-cutoff_hz = freq.double() * 2 ** offset</code></pre>
+<div class="math display-math">f_{\mathrm{base}}=f_{\mathrm{note}}\,2^o</div>
 
-<p>The LFO itself returns <code>depth * torch.sin(2 * torch.pi * rate * time)</code>. In the default configuration, coefficients update at <strong>200 Hz</strong>, not at every audio sample. At 24 kHz, each set lasts 120 samples. Setting the control rate to the audio sample rate gives sample-wise updates. The sinusoid is smooth, but the default filter coefficients are held between updates.</p>
+<p>Here, <span class="math">o</span> is <code>cutoff_octaves</code>, <span class="math">f_{\mathrm{note}}</span> is the MIDI note's frequency, and <span class="math">f_{\mathrm{base}}</span> is the cutoff before modulation. For a 200 Hz note, offsets of 0, 1 and 3 octaves give cutoffs of 200, 400 and 1,600 Hz. Offsets can be fractional too. If we play a note an octave higher with the same preset, the cutoff also doubles.</p>
 
-<p>These snippets use physical controls. The synth maps normalized Q outputs logarithmically to 0.5–10, and LFO rate to 0.5–10 Hz. At 24 kHz, the supported cutoff range is 20 Hz–10 kHz; decoded LFO depth is limited to two octaves or the available cutoff headroom, whichever is smaller.</p>
+<p>The LFO adds a moving offset to this base setting. We measure its depth in octaves too, so the sweep changes frequency by a <em>ratio</em>. A depth of one octave allows the cutoff to move up to twice the base frequency and down to half of it.</p>
 
-<p>Fortunately, I didn&#x27;t have to implement differentiable recursive filtering from scratch. I used <strong><a href="https://github.com/DiffAPF/torchlpc">TorchLPC</a></strong>, which provides an efficient differentiable implementation of recursive linear filtering. This allowed me to compute gradients through the filter even with time-varying coefficients.</p>
+<p>To produce that moving offset, the LFO starts with a sine wave between −1 and 1, then multiplies it by the depth:</p>
 
-<p>The coefficients use the standard low-pass biquad equations. They are divided by the first denominator coefficient, so the recurrence has an implicit <span class="math">a_0=1</span>:</p>
+<p class="code-source">From <code>synth/modulation/lfo.py</code>, with explanatory comments</p>
+<pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">__call__</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> time<span class="code-operator">,</span> rate<span class="code-operator">,</span> depth<span class="code-operator">)</span><span class="code-operator">:</span>
+    <span class="code-comment"># sin gives a position in [-1, 1]; depth scales it to an octave offset.</span>
+    <span class="code-keyword">return</span> depth <span class="code-operator">*</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">sin</span><span class="code-operator">(</span><span class="code-number">2</span> <span class="code-operator">*</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>pi <span class="code-operator">*</span> rate <span class="code-operator">*</span> time<span class="code-operator">)</span></code></pre>
 
-<p class="code-source">From <code>synth/filters/lowpass.py</code></p>
-<pre><code class="language-python">omega = 2 * torch.pi * cutoff_hz / self.sample_rate
-cosine = torch.cos(omega)
-alpha = torch.sin(omega) / (2 * q)
-a = torch.cat([1 + alpha, -2 * cosine, 1 - alpha], dim=-1)
-b = torch.cat([(1 - cosine) / 2, 1 - cosine, (1 - cosine) / 2], dim=-1)
-# Normalize so the first denominator coefficient is 1.
-return a / a[:, :1], b / a[:, :1]</code></pre>
+<p>In the code, <code>rate</code> is in hertz, <code>time</code> is in seconds, and <code>depth</code> is in octaves. At 2 Hz, the sine completes two cycles each second. With a depth of one octave, the returned offset moves between −1 and +1 octave.</p>
 
-<p>For the time-varying path, the coefficient sets are repeated across their update intervals. In the following excerpt, <code>a</code> and <code>b</code> already have shape <code>[batch, samples, 3]</code>, and <code>x</code> is the input audio. The feedforward part is vectorized; TorchLPC handles the recursive denominator:</p>
+<p>To turn that offset into a cutoff in hertz, we use the same power-of-two conversion as before. Writing the LFO rate as <span class="math">r</span> and its depth as <span class="math">D</span> gives:</p>
 
-<p class="code-source">From <code>synth/filters/lowpass.py</code></p>
-<pre><code class="language-python"># Current and previous input samples, with zero history before the clip.
-padded = torch.nn.functional.pad(x, (2, 0))
-numerator = b[..., 0] * x + b[..., 1] * padded[:, 1:-1] + b[..., 2] * padded[:, :-2]
-# One recursive pass preserves history across every coefficient update.
-filtered = sample_wise_lpc(numerator.contiguous(), a[..., 1:].contiguous())</code></pre>
+<div class="math display-math">f_c(t)=f_{\mathrm{base}}\,2^{D\sin(2\pi rt)}</div>
 
-<p>The leading denominator coefficient is omitted because it is one. The two preceding input samples are zero before the clip, and TorchLPC starts with zero recursive history. Importantly, there is <strong>one recursive pass across the whole clip</strong>: coefficient updates do not reset the filter state.</p>
+<p>Here, <span class="math">f_c(t)</span> means “the cutoff frequency at time <span class="math">t</span>.” The sine supplies the changing position in the sweep; <span class="math">D</span> scales that position in octaves; and raising two to that offset gives the frequency multiplier.</p>
 
-<p>The filter uses float64 internally to improve numerical stability at low cutoffs and high resonance, then casts its output back to the audio dtype. Without modulation, it instead uses <code>torchaudio.functional.lfilter</code>. Both paths preserve gradients through the audio and filter controls; the modulated path also connects them to LFO rate and depth.</p>
+<p>For a base cutoff of 1,000 Hz and a depth of one octave, a sine value of zero leaves the cutoff at 1,000 Hz. At +1 it becomes <span class="math">1000\times2=2000</span> Hz, and at −1 it becomes <span class="math">1000/2=500</span> Hz. The rate only changes how quickly we travel through that sweep.</p>
+
+<figure class="response-figure" id="lfo-cutoff-example"><img src="../../assets/lfo-cutoff-example.svg" width="640" height="230" alt="A 2 Hz LFO sweeps a 1000 Hz base cutoff between 500 and 2000 Hz over one second"><figcaption>A 2 Hz LFO with one-octave depth. The dashed line marks the 1,000 Hz base cutoff. The offset is sinusoidal in octaves; the resulting curve in hertz is not a sine wave.</figcaption></figure>
+
+<h4>When do the filter settings change?</h4>
+
+<p>The audio runs at 24,000 samples per second. By default, we update the cutoff and its filter coefficients 200 times per second. These are two different rates: a 2 Hz LFO still makes two sweeps per second, but we evaluate 100 cutoff settings during each sweep.</p>
+
+<p>An update every <span class="math">1/200</span> seconds means an update every 5 milliseconds, or every 120 audio samples. We keep the same coefficients for those 120 samples, then use the next set. The filter continues calculating audio throughout; it does not stop or restart at each update.</p>
+
+<p>This is why the synth takes every 120th entry from the audio time vector before calling the LFO. The following excerpt joins the steps we have just described: choose update times, calculate an octave offset, then convert it to hertz.</p>
+
+<p class="code-source">From <code>synth/synth.py</code>, with explanatory comments</p>
+<pre><code class="language-python"><span class="code-comment"># At 24 kHz with 200 updates/second, lfo_block_size is 120.</span>
+<span class="code-comment"># Select times 0, 0.005, 0.010, ... seconds from the audio time vector.</span>
+update_times <span class="code-operator">=</span> time<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">:</span><span class="code-namespace">self</span><span class="code-operator">.</span>lfo_block_size<span class="code-operator">]</span>
+<span class="code-comment"># Base octave offset + moving LFO offset, one value per update.</span>
+offset <span class="code-operator">=</span> offset <span class="code-operator">+</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">lfo</span><span class="code-operator">(</span>update_times<span class="code-operator">,</span> rate<span class="code-operator">,</span> depth<span class="code-operator">)</span>
+<span class="code-comment"># Convert the total octave offset into a frequency relative to the note.</span>
+cutoff_hz <span class="code-operator">=</span> freq<span class="code-operator">.</span><span class="code-function">double</span><span class="code-operator">(</span><span class="code-operator">)</span> <span class="code-operator">*</span> <span class="code-number">2</span> <span class="code-operator">**</span> offset</code></pre>
+
+<p>The first <code>offset</code> is the fixed base setting, shaped <code>[batch, 1]</code>. The LFO adds one offset per update, so the result and <code>cutoff_hz</code> are shaped <code>[batch, updates]</code>. The earlier formula describes a smooth sweep; these settings are a regularly sampled version of it, held between updates. Setting <code>lfo_control_rate</code> to the audio sample rate instead gives one update per audio sample.</p>
+
+<p>The allowed cutoff range is 20 Hz–10 kHz at our 24 kHz sample rate. When decoding predicted controls, Ava limits the available LFO depth so the whole sweep stays within those bounds, with a maximum depth of two octaves. For example, a full octave above an 8 kHz base would reach 16 kHz, so that base setting permits a smaller sweep.</p>
+
+<h4>From cutoff to filtered audio</h4>
+
+<p>Now that we have the cutoff at each update, we can calculate the <span class="math">a</span> and <span class="math">b</span> weights from the recurrence. The code first converts cutoff hertz to an angular frequency in radians per audio sample. The intermediate value <code>alpha</code> incorporates Q, which controls resonance:</p>
+
+<p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
+<pre><code class="language-python"><span class="code-comment"># Convert cutoff Hz to radians per sample.</span>
+omega <span class="code-operator">=</span> <span class="code-number">2</span> <span class="code-operator">*</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>pi <span class="code-operator">*</span> cutoff_hz <span class="code-operator">/</span> <span class="code-namespace">self</span><span class="code-operator">.</span>sample_rate
+cosine <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">cos</span><span class="code-operator">(</span>omega<span class="code-operator">)</span>
+alpha <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">sin</span><span class="code-operator">(</span>omega<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-operator">(</span><span class="code-number">2</span> <span class="code-operator">*</span> q<span class="code-operator">)</span>
+<span class="code-comment"># Pack [a0, a1, a2] and [b0, b1, b2] for each cutoff/Q pair.</span>
+a <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">cat</span><span class="code-operator">(</span><span class="code-operator">[</span><span class="code-number">1</span> <span class="code-operator">+</span> alpha<span class="code-operator">,</span> <span class="code-operator">-</span><span class="code-number">2</span> <span class="code-operator">*</span> cosine<span class="code-operator">,</span> <span class="code-number">1</span> <span class="code-operator">-</span> alpha<span class="code-operator">]</span><span class="code-operator">,</span> dim<span class="code-operator">=</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">)</span>
+b <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">cat</span><span class="code-operator">(</span><span class="code-operator">[</span><span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> cosine<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-number">2</span><span class="code-operator">,</span> <span class="code-number">1</span> <span class="code-operator">-</span> cosine<span class="code-operator">,</span> <span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> cosine<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-number">2</span><span class="code-operator">]</span><span class="code-operator">,</span> dim<span class="code-operator">=</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">)</span>
+<span class="code-comment"># Divide every coefficient by a0, so the new a0 is 1.</span>
+<span class="code-keyword">return</span> a <span class="code-operator">/</span> a<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-number">1</span><span class="code-operator">]</span><span class="code-operator">,</span> b <span class="code-operator">/</span> a<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-number">1</span><span class="code-operator">]</span></code></pre>
+
+<p>For each cutoff/Q pair, <code>torch.cat</code> packs three numbers into <code>a</code> and three into <code>b</code>. The extra coefficient <span class="math">a_0=1+\alpha</span> would multiply <span class="math">y[n]</span> on the left-hand side of the general filter equation.</p>
+
+<p>Dividing every coefficient in <em>both</em> arrays by <span class="math">a_0</span> leaves <span class="math">y[n]</span> on its own, with a new leading coefficient of one. The recurrence we started with already uses these normalized coefficients, so it does not show another division by <span class="math">a_0</span>.</p>
+
+<p>We then repeat each coefficient set over its 120-sample interval. This gives arrays shaped <code>[batch, samples, 3]</code>: three input weights and three denominator coefficients for every audio sample.</p>
+
+<p>The input terms are easy to calculate together because the whole input waveform is already available. Padding it with two zeros creates aligned views of the current sample, one sample ago, and two samples ago. Their weighted sum is the first line of the recurrence:</p>
+
+<p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
+<pre><code class="language-python"><span class="code-comment"># x: [batch, samples]. Add two zeros before its first sample.</span>
+padded <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>nn<span class="code-operator">.</span>functional<span class="code-operator">.</span><span class="code-function">pad</span><span class="code-operator">(</span>x<span class="code-operator">,</span> <span class="code-operator">(</span><span class="code-number">2</span><span class="code-operator">,</span> <span class="code-number">0</span><span class="code-operator">)</span><span class="code-operator">)</span>
+<span class="code-comment"># b[..., 0], b[..., 1], b[..., 2] are the input weights at each sample.</span>
+numerator <span class="code-operator">=</span> b<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">0</span><span class="code-operator">]</span> <span class="code-operator">*</span> x <span class="code-operator">+</span> b<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">]</span> <span class="code-operator">*</span> padded<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">:</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">]</span> <span class="code-operator">+</span> b<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">2</span><span class="code-operator">]</span> <span class="code-operator">*</span> padded<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-operator">-</span><span class="code-number">2</span><span class="code-operator">]</span></code></pre>
+
+<p>For an input beginning <code>[x0, x1, x2, ...]</code>, the first shifted view begins <code>[0, x0, x1, ...]</code> and the second begins <code>[0, 0, x0, ...]</code>. Each column now contains the three input samples needed to calculate that moment's contribution.</p>
+
+<p>The remaining step is the recursive part: subtracting the weighted previous outputs. I used <strong><a href="https://github.com/DiffAPF/torchlpc">TorchLPC</a></strong> to handle this efficiently, including backpropagation through time-varying coefficients. It receives the input contribution we just computed and the two feedback coefficients:</p>
+
+<p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
+<pre><code class="language-python"><span class="code-comment"># TorchLPC supplies the previous-output terms, using only a1 and a2.</span>
+filtered <span class="code-operator">=</span> <span class="code-function">sample_wise_lpc</span><span class="code-operator">(</span>numerator<span class="code-operator">.</span><span class="code-function">contiguous</span><span class="code-operator">(</span><span class="code-operator">)</span><span class="code-operator">,</span> a<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">:</span><span class="code-operator">]</span><span class="code-operator">.</span><span class="code-function">contiguous</span><span class="code-operator">(</span><span class="code-operator">)</span><span class="code-operator">)</span></code></pre>
+
+<p><code>a[..., 1:]</code> selects <span class="math">a_1</span> and <span class="math">a_2</span>, leaving out the normalized <span class="math">a_0=1</span>. <code>contiguous()</code> gives the library tensors with a standard memory layout. TorchLPC starts with zero output history and makes <strong>one recursive pass across the whole clip</strong>, preserving that history when coefficients change.</p>
+
+<p>Without LFO modulation, the synth uses <code>torchaudio.functional.lfilter</code> with fixed coefficients. Both paths use float64 internally for stability at low cutoffs and high resonance, then cast back to the audio dtype. Gradients pass through the input audio, cutoff and Q, and through LFO rate and depth when modulation is enabled.</p>
 
 <h3 id="drive-gain-and-putting-everything-together">Drive, gain, and putting everything together</h3>
 
-<p>The remaining components are relatively simple. Drive introduces nonlinear distortion, adding harmonics to the signal, while gain controls the final output level.</p>
+<p>Drive adds soft distortion, reshaping the waveform and adding harmonics. Calling the drive amount <span class="math">d</span>, an input sample <span class="math">x</span> becomes an output sample <span class="math">y</span> through:</p>
 
-<p>Drive uses normalized hyperbolic-tangent saturation:</p>
+<div class="math display-math">y=\frac{\tanh(d\cdot x)}{\tanh(d)}</div>
 
-<div class="math display-math">y = \frac{\tanh(\text{drive}\,x)}{\tanh(\text{drive})}</div>
+<p>The multiplication by <span class="math">d</span> pushes more of the signal into the flattened part of <span class="math">\tanh</span>. Dividing by <span class="math">\tanh(d)</span> keeps input values of −1 and +1 mapped to −1 and +1. Increasing drive therefore changes the shape, rather than simply increasing the output gain.</p>
 
-<p>At zero drive, this expression has the identity mapping as its limit. The implementation uses a small-drive Taylor approximation to avoid division by zero while keeping both branches finite:</p>
+<figure class="response-figure" id="drive-example"><img src="../../assets/drive-response.svg" width="640" height="300" alt="Input-to-output curves for drive amounts zero, two and five; higher drive makes the curve steeper near zero and flatter near its ends"><div class="plot-legend"><span><svg width="24" height="10" aria-hidden="true"><path d="M0 5H24" stroke="#637067" stroke-width="2" stroke-dasharray="5 4"/></svg>d = 0</span><span><svg width="24" height="10" aria-hidden="true"><path d="M0 5H24" stroke="#347358" stroke-width="2"/></svg>d = 2</span><span><svg width="24" height="10" aria-hidden="true"><path d="M0 5H24" stroke="#86672f" stroke-width="2" stroke-dasharray="2 3"/></svg>d = 5</span></div><figcaption>Each curve maps an input sample's amplitude to its output amplitude. Zero drive is the diagonal identity mapping; more drive makes the response steeper near zero and flatter near the ends.</figcaption></figure>
 
-<p class="code-source">From <code>synth/effects/distortion.py</code></p>
-<pre><code class="language-python">safe_drive = drive.clamp_min(1e-4)
-shaped = torch.tanh(safe_drive * audio) / torch.tanh(safe_drive)
-near_zero = audio + drive.square() * (audio - audio.pow(3)) / 3
-return torch.where(drive &lt; 1e-4, near_zero, shaped)</code></pre>
+<p>At zero drive, the formula has the limit <span class="math">y=x</span>, but evaluating it directly would divide zero by zero. The implementation therefore uses a small-drive Taylor approximation near zero. Both branches stay finite, which also matters when differentiating through <code>torch.where</code>:</p>
 
-<p>Drive comes before the ADSR amplitude envelope. The final output is multiplied by both preset gain and MIDI velocity.</p>
+<p class="code-source">From <code>synth/effects/distortion.py</code>, with explanatory comments</p>
+<pre><code class="language-python"><span class="code-comment"># Keep the tanh branch finite even if drive is zero.</span>
+safe_drive <span class="code-operator">=</span> drive<span class="code-operator">.</span><span class="code-function">clamp_min</span><span class="code-operator">(</span><span class="code-number">1e-4</span><span class="code-operator">)</span>
+shaped <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">tanh</span><span class="code-operator">(</span>safe_drive <span class="code-operator">*</span> audio<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">tanh</span><span class="code-operator">(</span>safe_drive<span class="code-operator">)</span>
+<span class="code-comment"># Small-drive approximation; at drive = 0 this is just audio.</span>
+near_zero <span class="code-operator">=</span> audio <span class="code-operator">+</span> drive<span class="code-operator">.</span><span class="code-function">square</span><span class="code-operator">(</span><span class="code-operator">)</span> <span class="code-operator">*</span> <span class="code-operator">(</span>audio <span class="code-operator">-</span> audio<span class="code-operator">.</span><span class="code-function">pow</span><span class="code-operator">(</span><span class="code-number">3</span><span class="code-operator">)</span><span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-number">3</span>
+<span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">where</span><span class="code-operator">(</span>drive <span class="code-operator">&lt;</span> <span class="code-number">1e-4</span><span class="code-operator">,</span> near_zero<span class="code-operator">,</span> shaped<span class="code-operator">)</span></code></pre>
+
+<p>Drive comes before the ADSR amplitude envelope. Finally, preset gain and MIDI velocity multiply the output level.</p>
 
 <p>With all the components in place, the complete synthesizer is simply a sequence of operations transforming the MIDI input and preset parameters into an audio waveform.</p>
 

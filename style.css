@@ -250,3 +250,18 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 }
 
 .waveform-comparison > summary { cursor: pointer; color: var(--accent); font-size: 15px; }
+
+.deep-dive-body h4 { margin: 32px 0 18px; font: normal 22px/1.4 Georgia, serif; }
+.deep-dive-body pre code { font-size: 14px; }
+.code-comment { color: #586f61; }
+.code-keyword { color: #75418c; font-weight: 600; }
+.code-string { color: #914137; }
+.code-number { color: #9c461c; }
+.code-function { color: #2166a0; }
+.code-namespace { color: #75418c; }
+.code-operator { color: #795b2b; }
+.response-figure { margin: 30px 0; }
+.response-figure > img { display: block; width: 100%; height: auto; }
+.response-figure figcaption { margin-top: 10px; color: var(--muted); font: 13px/1.6 system-ui, sans-serif; }
+.plot-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 18px; margin-top: 10px; font: 13px/1.5 system-ui, sans-serif; }
+.plot-legend span { display: flex; align-items: center; gap: 6px; }
