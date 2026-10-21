@@ -62,11 +62,11 @@
           </figcaption>
           <div class="flow-oscillators">
             <details class="signal-node" name="synth-stage">
-              <summary>Oscillator A</summary>
+              <summary><svg class="signal-sketch" aria-hidden="true" focusable="false"><use href="../../assets/synth-sketches.svg#saw"></use></svg><span>Oscillator A</span></summary>
               <p>A sine, triangle, square or sawtooth wave at the played note's pitch.</p>
             </details>
             <details class="signal-node" name="synth-stage">
-              <summary>Oscillator B</summary>
+              <summary><svg class="signal-sketch" aria-hidden="true" focusable="false"><use href="../../assets/synth-sketches.svg#square"></use></svg><span>Oscillator B</span></summary>
               <p>The same four waveform choices, with a detuning offset relative to oscillator A.</p>
             </details>
           </div>
@@ -82,7 +82,7 @@
           </div>
           <div class="flow-arrow" aria-hidden="true">↓</div>
           <div class="flow-side-row">
-            <div class="flow-source"><span>White<br>noise</span><span aria-hidden="true">→</span></div>
+            <div class="flow-source"><span class="flow-label"><svg class="signal-sketch" aria-hidden="true" focusable="false"><use href="../../assets/synth-sketches.svg#noise"></use></svg>White<br>noise</span><span aria-hidden="true">→</span></div>
             <details class="signal-node" name="synth-stage">
               <summary>Noise blend</summary>
               <p>Noise mix blends white noise into the oscillator signal before filtering.</p>
@@ -93,22 +93,22 @@
           <div class="flow-side-row">
             <span></span>
             <details class="signal-node" name="synth-stage">
-              <summary>Resonant low-pass</summary>
+              <summary><svg class="signal-sketch" aria-hidden="true" focusable="false"><use href="../../assets/synth-sketches.svg#lowpass"></use></svg><span>Resonant low-pass</span></summary>
               <p>Cutoff controls brightness; resonance emphasizes frequencies near the cutoff. The cutoff follows the played pitch. The LFO moves it over time, with its rate and depth setting the speed and amount.</p>
             </details>
-            <div class="flow-control"><span class="modulation-arrow" aria-hidden="true">⇠</span><span>LFO<br><small>rate, depth</small></span></div>
+            <div class="flow-control"><span class="modulation-arrow" aria-hidden="true">⇠</span><span class="flow-label"><svg class="signal-sketch" aria-hidden="true" focusable="false"><use href="../../assets/synth-sketches.svg#sine"></use></svg>LFO<br><small>rate, depth</small></span></div>
           </div>
           <div class="flow-arrow" aria-hidden="true">↓</div>
           <div class="flow-step">
             <details class="signal-node" name="synth-stage">
-              <summary>Drive</summary>
+              <summary><svg class="signal-sketch" aria-hidden="true" focusable="false"><use href="../../assets/synth-sketches.svg#drive"></use></svg><span>Drive</span></summary>
               <p>Soft distortion adds harmonic content before the amplitude envelope is applied.</p>
             </details>
           </div>
           <div class="flow-arrow" aria-hidden="true">↓</div>
           <div class="flow-step">
             <details class="signal-node" name="synth-stage">
-              <summary>ADSR envelope</summary>
+              <summary><svg class="signal-sketch" aria-hidden="true" focusable="false"><use href="../../assets/synth-sketches.svg#adsr"></use></svg><span>ADSR envelope</span></summary>
               <p>Attack, decay and sustain shape the held note's amplitude. Note-off starts the release.</p>
             </details>
           </div>
@@ -120,7 +120,7 @@
             </details>
           </div>
           <div class="flow-arrow" aria-hidden="true">↓</div>
-          <div class="flow-output">Audio output</div>
+          <div class="flow-output"><svg class="signal-sketch" aria-hidden="true" focusable="false"><use href="../../assets/synth-sketches.svg#audio"></use></svg><span>Audio output</span></div>
           <p class="flow-note">Solid arrows carry audio; the dashed arrow shows cutoff modulation. Pitch, velocity and note-on/off arrive separately from MIDI.</p>
         </figure>
 

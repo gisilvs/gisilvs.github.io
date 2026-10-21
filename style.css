@@ -161,9 +161,9 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .flow-oscillators { display: grid; grid-template-columns: 1fr 1fr; align-items: end; }
 .flow-oscillators .signal-node { width: calc(100% - 12px); max-width: 250px; margin: 0 auto; }
 .signal-node { padding: 12px; border: 1px solid #c4d2c7; border-radius: 6px; background: #f0f3ec; }
-.signal-node summary { cursor: pointer; list-style: none; text-align: center; font-weight: 600; }
+.signal-node summary { display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; list-style: none; text-align: center; font-weight: 600; }
 .signal-node summary::-webkit-details-marker { display: none; }
-.signal-node summary::after { content: '+'; color: var(--accent); margin-left: 6px; font-weight: 400; }
+.signal-node summary::after { content: '+'; color: var(--accent); margin-left: 0; flex-shrink: 0; font-weight: 400; }
 .signal-node[open] { border-color: var(--accent); background: #e9f0e5; }
 .signal-node[open] summary::after { content: '−'; }
 .signal-node summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
@@ -179,8 +179,15 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .flow-control { color: #86672f; }
 .flow-control small { font-size: 10px; }
 .modulation-arrow { font-size: 24px; }
-.flow-output { text-align: center; font-weight: 600; }
+.flow-output { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; }
 .synth-diagram .flow-note { margin: 22px auto 0; max-width: 470px; color: var(--muted); text-align: center; font-size: 12px; }
+
+/* The sketches are decorative examples; oscillator waveform choices stay independent. */
+.signal-sketch { display: block; width: 36px; height: 22px; flex: 0 0 36px; color: var(--accent); }
+.signal-node summary span { min-width: 0; }
+.flow-label { text-align: center; }
+.flow-label .signal-sketch { margin: 0 auto 4px; }
+.flow-control .signal-sketch { color: inherit; }
 
 @media (max-width: 650px) {
   body { padding: 0 22px; }
@@ -198,4 +205,6 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
   .status { margin-top: 20px; }
   .article { padding-top: 36px; }
   .article-section { font-size: 17px; }
+  .signal-node summary { gap: 6px; }
+  .signal-sketch { width: 30px; height: 20px; flex-basis: 30px; }
 }

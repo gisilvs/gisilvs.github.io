@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="saw" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 27 18 5V27L34 5V27L50 5V27L62 10"/>
+  </symbol>
+  <symbol id="square" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 26V6H17V26H32V6H47V26H62"/>
+  </symbol>
+  <symbol id="noise" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m2 17 3-8 3 15 3-10 3 4 3-15 3 22 3-13 3 8 3-12 3 20 3-13 3 6 3-15 3 19 3-15 3 8 3-13 3 19 3-13 3 5"/>
+  </symbol>
+  <symbol id="sine" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 16C7 2 13 2 18 16S29 30 34 16 45 2 50 16 57 30 62 16"/>
+  </symbol>
+  <symbol id="adsr" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 28 12 4Q19 18 26 18H43Q50 28 62 28"/>
+  </symbol>
+  <symbol id="audio" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 14V18M9 10V22M15 4V28M21 8V24M27 12V20M33 3V29M39 7V25M45 11V21M51 6V26M57 13V19M63 15V17"/>
+  </symbol>
+  <symbol id="lowpass" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 3V29H62" opacity=".22"/><path d="M2 10H28C34 10 37 4 40 6S45 24 52 27L62 28"/>
+  </symbol>
+  <symbol id="drive" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 3V29H62" opacity=".22"/><path d="M4 28C27 28 23 4 61 4"/>
+  </symbol>
+</svg>
