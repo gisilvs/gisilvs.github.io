@@ -259,8 +259,3 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .code-function { color: #2166a0; }
 .code-namespace { color: #75418c; }
 .code-operator { color: #795b2b; }
-.response-figure { margin: 30px 0; }
-.response-figure > img { display: block; width: 100%; height: auto; }
-.response-figure figcaption { margin-top: 10px; color: var(--muted); font: 13px/1.6 system-ui, sans-serif; }
-.plot-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 18px; margin-top: 10px; font: 13px/1.5 system-ui, sans-serif; }
-.plot-legend span { display: flex; align-items: center; gap: 6px; }

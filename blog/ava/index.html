@@ -6,7 +6,7 @@
   <meta name="description" content="Building Ava, a differentiable synthesizer that turns natural language descriptions into playable presets.">
   <title>Ava: Text-to-Synth — Gianluigi Silvestri</title>
   <link rel="canonical" href="https://gisilvs.github.io/blog/ava/">
-  <link rel="stylesheet" href="../../style.css?v=filter-explained">
+  <link rel="stylesheet" href="../../style.css?v=filter-simplified">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
   <script defer src="deep-dive.js"></script>
@@ -323,7 +323,7 @@ tail <span class="code-operator">=</span> level_at_release <span class="code-ope
 
 <p>The filter was probably the most interesting (and hardest) component to implement.</p>
 
-<p>Ava uses a second-order resonant low-pass filter, also known as a <strong>biquad</strong>. A low-pass filter lets lower frequencies through and reduces higher ones. Its <em>cutoff</em>, measured in hertz, controls where it transitions between those two regions. Resonance, controlled by the dimensionless value <span class="math">Q</span>, emphasizes the frequencies around the cutoff. Higher Q creates a stronger emphasis.</p>
+<p>Ava uses a second-order resonant low-pass filter, also known as a <strong>biquad</strong>. A low-pass filter lets lower frequencies through and reduces higher ones. Its <em>cutoff</em>, measured in hertz, controls where it transitions between those two regions. Resonance, controlled by the value <span class="math">Q</span>, emphasizes the frequencies around the cutoff.</p>
 
 <h4>A filter, one sample at a time</h4>
 
@@ -348,65 +348,11 @@ y[n] ={}&amp; b_0 x[n] + b_1 x[n-1] + b_2 x[n-2]\\
 
 <p>Read the first line as “take a weighted combination of the current input and the two preceding inputs.” Then subtract the weighted previous outputs on the second line. The coefficients themselves can be positive or negative; the minus signs are part of the way this filter is written.</p>
 
-<p>We begin with zero history before the clip. After calculating <span class="math">y[0]</span>, we can use it to calculate <span class="math">y[1]</span>, then use those results for <span class="math">y[2]</span>, and continue. This dependence on earlier outputs is what makes the filter <strong>recursive</strong>.</p>
+<h4>Calculating and applying the filter</h4>
 
-<p>Those five weights are not five independent preset controls. We calculate them from the desired cutoff and resonance. Keeping cutoff and Q fixed gives one set of weights for the note. Moving the cutoff means recalculating them as the note plays.</p>
+<p>In Ava, the cutoff follows the played pitch to keep a similar effect across the keyboard. We express it as an octave offset from the note's frequency, then convert it to hertz before calculating the filter coefficients.</p>
 
-<h4>Moving the cutoff with an LFO</h4>
-
-<p>An LFO is a <em>low-frequency oscillator</em>. Here, its output does not become audible audio directly: it moves the filter cutoff up and down. Its <strong>rate</strong> says how many complete movements happen per second, while its <strong>depth</strong> says how far the cutoff moves.</p>
-
-<p>First, consider the cutoff with the LFO switched off. In Ava we set it relative to the played note. The parameter <code>cutoff_octaves</code> says how many octaves above or below the note to place the cutoff. This changes the filter, not the oscillator's pitch. Since one octave means a factor of two in frequency:</p>
-
-<div class="math display-math">f_{\mathrm{base}}=f_{\mathrm{note}}\,2^o</div>
-
-<p>Here, <span class="math">o</span> is <code>cutoff_octaves</code>, <span class="math">f_{\mathrm{note}}</span> is the MIDI note's frequency, and <span class="math">f_{\mathrm{base}}</span> is the cutoff before modulation. For a 200 Hz note, offsets of 0, 1 and 3 octaves give cutoffs of 200, 400 and 1,600 Hz. Offsets can be fractional too. If we play a note an octave higher with the same preset, the cutoff also doubles.</p>
-
-<p>The LFO adds a moving offset to this base setting. We measure its depth in octaves too, so the sweep changes frequency by a <em>ratio</em>. A depth of one octave allows the cutoff to move up to twice the base frequency and down to half of it.</p>
-
-<p>To produce that moving offset, the LFO starts with a sine wave between −1 and 1, then multiplies it by the depth:</p>
-
-<p class="code-source">From <code>synth/modulation/lfo.py</code>, with explanatory comments</p>
-<pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">__call__</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> time<span class="code-operator">,</span> rate<span class="code-operator">,</span> depth<span class="code-operator">)</span><span class="code-operator">:</span>
-    <span class="code-comment"># sin gives a position in [-1, 1]; depth scales it to an octave offset.</span>
-    <span class="code-keyword">return</span> depth <span class="code-operator">*</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">sin</span><span class="code-operator">(</span><span class="code-number">2</span> <span class="code-operator">*</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>pi <span class="code-operator">*</span> rate <span class="code-operator">*</span> time<span class="code-operator">)</span></code></pre>
-
-<p>In the code, <code>rate</code> is in hertz, <code>time</code> is in seconds, and <code>depth</code> is in octaves. At 2 Hz, the sine completes two cycles each second. With a depth of one octave, the returned offset moves between −1 and +1 octave.</p>
-
-<p>To turn that offset into a cutoff in hertz, we use the same power-of-two conversion as before. Writing the LFO rate as <span class="math">r</span> and its depth as <span class="math">D</span> gives:</p>
-
-<div class="math display-math">f_c(t)=f_{\mathrm{base}}\,2^{D\sin(2\pi rt)}</div>
-
-<p>Here, <span class="math">f_c(t)</span> means “the cutoff frequency at time <span class="math">t</span>.” The sine supplies the changing position in the sweep; <span class="math">D</span> scales that position in octaves; and raising two to that offset gives the frequency multiplier.</p>
-
-<p>For a base cutoff of 1,000 Hz and a depth of one octave, a sine value of zero leaves the cutoff at 1,000 Hz. At +1 it becomes <span class="math">1000\times2=2000</span> Hz, and at −1 it becomes <span class="math">1000/2=500</span> Hz. The rate only changes how quickly we travel through that sweep.</p>
-
-<figure class="response-figure" id="lfo-cutoff-example"><img src="../../assets/lfo-cutoff-example.svg" width="640" height="230" alt="A 2 Hz LFO sweeps a 1000 Hz base cutoff between 500 and 2000 Hz over one second"><figcaption>A 2 Hz LFO with one-octave depth. The dashed line marks the 1,000 Hz base cutoff. The offset is sinusoidal in octaves; the resulting curve in hertz is not a sine wave.</figcaption></figure>
-
-<h4>When do the filter settings change?</h4>
-
-<p>The audio runs at 24,000 samples per second. By default, we update the cutoff and its filter coefficients 200 times per second. These are two different rates: a 2 Hz LFO still makes two sweeps per second, but we evaluate 100 cutoff settings during each sweep.</p>
-
-<p>An update every <span class="math">1/200</span> seconds means an update every 5 milliseconds, or every 120 audio samples. We keep the same coefficients for those 120 samples, then use the next set. The filter continues calculating audio throughout; it does not stop or restart at each update.</p>
-
-<p>This is why the synth takes every 120th entry from the audio time vector before calling the LFO. The following excerpt joins the steps we have just described: choose update times, calculate an octave offset, then convert it to hertz.</p>
-
-<p class="code-source">From <code>synth/synth.py</code>, with explanatory comments</p>
-<pre><code class="language-python"><span class="code-comment"># At 24 kHz with 200 updates/second, lfo_block_size is 120.</span>
-<span class="code-comment"># Select times 0, 0.005, 0.010, ... seconds from the audio time vector.</span>
-update_times <span class="code-operator">=</span> time<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">:</span><span class="code-namespace">self</span><span class="code-operator">.</span>lfo_block_size<span class="code-operator">]</span>
-<span class="code-comment"># Base octave offset + moving LFO offset, one value per update.</span>
-offset <span class="code-operator">=</span> offset <span class="code-operator">+</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">lfo</span><span class="code-operator">(</span>update_times<span class="code-operator">,</span> rate<span class="code-operator">,</span> depth<span class="code-operator">)</span>
-<span class="code-comment"># Convert the total octave offset into a frequency relative to the note.</span>
-cutoff_hz <span class="code-operator">=</span> freq<span class="code-operator">.</span><span class="code-function">double</span><span class="code-operator">(</span><span class="code-operator">)</span> <span class="code-operator">*</span> <span class="code-number">2</span> <span class="code-operator">**</span> offset</code></pre>
-
-<p>The first <code>offset</code> is the fixed base setting, shaped <code>[batch, 1]</code>. The LFO adds one offset per update, so the result and <code>cutoff_hz</code> are shaped <code>[batch, updates]</code>. The earlier formula describes a smooth sweep; these settings are a regularly sampled version of it, held between updates. Setting <code>lfo_control_rate</code> to the audio sample rate instead gives one update per audio sample.</p>
-
-<p>The allowed cutoff range is 20 Hz–10 kHz at our 24 kHz sample rate. When decoding predicted controls, Ava limits the available LFO depth so the whole sweep stays within those bounds, with a maximum depth of two octaves. For example, a full octave above an 8 kHz base would reach 16 kHz, so that base setting permits a smaller sweep.</p>
-
-<h4>From cutoff to filtered audio</h4>
-
-<p>Now that we have the cutoff at each update, we can calculate the <span class="math">a</span> and <span class="math">b</span> weights from the recurrence. The code first converts cutoff hertz to an angular frequency in radians per audio sample. The intermediate value <code>alpha</code> incorporates Q, which controls resonance:</p>
+<p>With the LFO switched off, cutoff and Q stay fixed throughout the note, so we only need one set of coefficients. The following code calculates them from <code>cutoff_hz</code> and <code>q</code>:</p>
 
 <p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Convert cutoff Hz to radians per sample.</span>
@@ -419,53 +365,36 @@ b <span class="code-operator">=</span> <span class="code-namespace">torch</span>
 <span class="code-comment"># Divide every coefficient by a0, so the new a0 is 1.</span>
 <span class="code-keyword">return</span> a <span class="code-operator">/</span> a<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-number">1</span><span class="code-operator">]</span><span class="code-operator">,</span> b <span class="code-operator">/</span> a<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-number">1</span><span class="code-operator">]</span></code></pre>
 
-<p>For each cutoff/Q pair, <code>torch.cat</code> packs three numbers into <code>a</code> and three into <code>b</code>. The extra coefficient <span class="math">a_0=1+\alpha</span> would multiply <span class="math">y[n]</span> on the left-hand side of the general filter equation.</p>
+<p>The arrays contain <span class="math">[a_0,a_1,a_2]</span> and <span class="math">[b_0,b_1,b_2]</span>. Dividing both by <span class="math">a_0</span> makes its value one, giving the recurrence shown above.</p>
 
-<p>Dividing every coefficient in <em>both</em> arrays by <span class="math">a_0</span> leaves <span class="math">y[n]</span> on its own, with a new leading coefficient of one. The recurrence we started with already uses these normalized coefficients, so it does not show another division by <span class="math">a_0</span>.</p>
-
-<p>We then repeat each coefficient set over its 120-sample interval. This gives arrays shaped <code>[batch, samples, 3]</code>: three input weights and three denominator coefficients for every audio sample.</p>
-
-<p>The input terms are easy to calculate together because the whole input waveform is already available. Padding it with two zeros creates aligned views of the current sample, one sample ago, and two samples ago. Their weighted sum is the first line of the recurrence:</p>
+<p>We can then pass the audio and coefficients to <code>torchaudio.functional.lfilter</code>, which handles the previous-input and previous-output terms for us:</p>
 
 <p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
-<pre><code class="language-python"><span class="code-comment"># x: [batch, samples]. Add two zeros before its first sample.</span>
-padded <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>nn<span class="code-operator">.</span>functional<span class="code-operator">.</span><span class="code-function">pad</span><span class="code-operator">(</span>x<span class="code-operator">,</span> <span class="code-operator">(</span><span class="code-number">2</span><span class="code-operator">,</span> <span class="code-number">0</span><span class="code-operator">)</span><span class="code-operator">)</span>
-<span class="code-comment"># b[..., 0], b[..., 1], b[..., 2] are the input weights at each sample.</span>
-numerator <span class="code-operator">=</span> b<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">0</span><span class="code-operator">]</span> <span class="code-operator">*</span> x <span class="code-operator">+</span> b<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">]</span> <span class="code-operator">*</span> padded<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">:</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">]</span> <span class="code-operator">+</span> b<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">2</span><span class="code-operator">]</span> <span class="code-operator">*</span> padded<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-operator">-</span><span class="code-number">2</span><span class="code-operator">]</span></code></pre>
+<pre><code class="language-python"><span class="code-comment"># Compute one coefficient set per batch element from the fixed cutoff and Q.</span>
+batch <span class="code-operator">=</span> <span class="code-function">max</span><span class="code-operator">(</span>audio<span class="code-operator">.</span>shape<span class="code-operator">[</span><span class="code-number">0</span><span class="code-operator">]</span><span class="code-operator">,</span> cutoff_hz<span class="code-operator">.</span>shape<span class="code-operator">[</span><span class="code-number">0</span><span class="code-operator">]</span><span class="code-operator">)</span>
+a<span class="code-operator">,</span> b <span class="code-operator">=</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">coefficients</span><span class="code-operator">(</span>cutoff_hz<span class="code-operator">.</span><span class="code-function">expand</span><span class="code-operator">(</span>batch<span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">)</span><span class="code-operator">,</span> q<span class="code-operator">.</span><span class="code-function">expand</span><span class="code-operator">(</span>batch<span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">)</span><span class="code-operator">)</span>
+<span class="code-comment"># lfilter evaluates the recurrence using these coefficients.</span>
+filtered <span class="code-operator">=</span> <span class="code-function">lfilter</span><span class="code-operator">(</span>audio<span class="code-operator">.</span><span class="code-function">double</span><span class="code-operator">(</span><span class="code-operator">)</span><span class="code-operator">.</span><span class="code-function">expand</span><span class="code-operator">(</span>batch<span class="code-operator">,</span> <span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">)</span><span class="code-operator">,</span> a<span class="code-operator">,</span> b<span class="code-operator">,</span>
+                   clamp<span class="code-operator">=</span><span class="code-keyword">False</span><span class="code-operator">,</span> batching<span class="code-operator">=</span><span class="code-keyword">True</span><span class="code-operator">)</span>
+<span class="code-keyword">return</span> filtered<span class="code-operator">.</span><span class="code-function">to</span><span class="code-operator">(</span>audio<span class="code-operator">.</span>dtype<span class="code-operator">)</span></code></pre>
 
-<p>For an input beginning <code>[x0, x1, x2, ...]</code>, the first shifted view begins <code>[0, x0, x1, ...]</code> and the second begins <code>[0, 0, x0, ...]</code>. Each column now contains the three input samples needed to calculate that moment's contribution.</p>
+<p>The calculation uses float64 internally for numerical stability, then returns the audio in its original dtype. PyTorch preserves gradients through the audio, cutoff and Q.</p>
 
-<p>The remaining step is the recursive part: subtracting the weighted previous outputs. I used <strong><a href="https://github.com/DiffAPF/torchlpc">TorchLPC</a></strong> to handle this efficiently, including backpropagation through time-varying coefficients. It receives the input contribution we just computed and the two feedback coefficients:</p>
+<h4>Adding LFO modulation</h4>
 
-<p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
-<pre><code class="language-python"><span class="code-comment"># TorchLPC supplies the previous-output terms, using only a1 and a2.</span>
-filtered <span class="code-operator">=</span> <span class="code-function">sample_wise_lpc</span><span class="code-operator">(</span>numerator<span class="code-operator">.</span><span class="code-function">contiguous</span><span class="code-operator">(</span><span class="code-operator">)</span><span class="code-operator">,</span> a<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">:</span><span class="code-operator">]</span><span class="code-operator">.</span><span class="code-function">contiguous</span><span class="code-operator">(</span><span class="code-operator">)</span><span class="code-operator">)</span></code></pre>
+<p>The LFO moves the cutoff up and down. Its rate controls how fast it moves, and its depth controls how far. As the cutoff changes, we need new values for <span class="math">a</span> and <span class="math">b</span>.</p>
 
-<p><code>a[..., 1:]</code> selects <span class="math">a_1</span> and <span class="math">a_2</span>, leaving out the normalized <span class="math">a_0=1</span>. <code>contiguous()</code> gives the library tensors with a standard memory layout. TorchLPC starts with zero output history and makes <strong>one recursive pass across the whole clip</strong>, preserving that history when coefficients change.</p>
+<p>We update those coefficients at <strong>200 Hz</strong>: every 5 milliseconds, or every 120 audio samples at 24 kHz. Between updates, the same coefficients remain in use while the filter continues producing audio at the full sample rate.</p>
 
-<p>Without LFO modulation, the synth uses <code>torchaudio.functional.lfilter</code> with fixed coefficients. Both paths use float64 internally for stability at low cutoffs and high resonance, then cast back to the audio dtype. Gradients pass through the input audio, cutoff and Q, and through LFO rate and depth when modulation is enabled.</p>
+<p>For this changing-coefficient case, we calculate the input terms in PyTorch and use <strong><a href="https://github.com/DiffAPF/torchlpc">TorchLPC</a></strong> for the recursive output terms and their gradients. The filter keeps its state across updates, so changing the cutoff does not restart it. Gradients can then flow back to the LFO rate and depth as well.</p>
 
 <h3 id="drive-gain-and-putting-everything-together">Drive, gain, and putting everything together</h3>
 
-<p>Drive adds soft distortion, reshaping the waveform and adding harmonics. Calling the drive amount <span class="math">d</span>, an input sample <span class="math">x</span> becomes an output sample <span class="math">y</span> through:</p>
+<p>Drive adds soft distortion, reshaping the waveform and adding harmonics. For a drive amount <span class="math">d&gt;0</span>, an input sample <span class="math">x</span> becomes:</p>
 
 <div class="math display-math">y=\frac{\tanh(d\cdot x)}{\tanh(d)}</div>
 
-<p>The multiplication by <span class="math">d</span> pushes more of the signal into the flattened part of <span class="math">\tanh</span>. Dividing by <span class="math">\tanh(d)</span> keeps input values of −1 and +1 mapped to −1 and +1. Increasing drive therefore changes the shape, rather than simply increasing the output gain.</p>
-
-<figure class="response-figure" id="drive-example"><img src="../../assets/drive-response.svg" width="640" height="300" alt="Input-to-output curves for drive amounts zero, two and five; higher drive makes the curve steeper near zero and flatter near its ends"><div class="plot-legend"><span><svg width="24" height="10" aria-hidden="true"><path d="M0 5H24" stroke="#637067" stroke-width="2" stroke-dasharray="5 4"/></svg>d = 0</span><span><svg width="24" height="10" aria-hidden="true"><path d="M0 5H24" stroke="#347358" stroke-width="2"/></svg>d = 2</span><span><svg width="24" height="10" aria-hidden="true"><path d="M0 5H24" stroke="#86672f" stroke-width="2" stroke-dasharray="2 3"/></svg>d = 5</span></div><figcaption>Each curve maps an input sample's amplitude to its output amplitude. Zero drive is the diagonal identity mapping; more drive makes the response steeper near zero and flatter near the ends.</figcaption></figure>
-
-<p>At zero drive, the formula has the limit <span class="math">y=x</span>, but evaluating it directly would divide zero by zero. The implementation therefore uses a small-drive Taylor approximation near zero. Both branches stay finite, which also matters when differentiating through <code>torch.where</code>:</p>
-
-<p class="code-source">From <code>synth/effects/distortion.py</code>, with explanatory comments</p>
-<pre><code class="language-python"><span class="code-comment"># Keep the tanh branch finite even if drive is zero.</span>
-safe_drive <span class="code-operator">=</span> drive<span class="code-operator">.</span><span class="code-function">clamp_min</span><span class="code-operator">(</span><span class="code-number">1e-4</span><span class="code-operator">)</span>
-shaped <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">tanh</span><span class="code-operator">(</span>safe_drive <span class="code-operator">*</span> audio<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">tanh</span><span class="code-operator">(</span>safe_drive<span class="code-operator">)</span>
-<span class="code-comment"># Small-drive approximation; at drive = 0 this is just audio.</span>
-near_zero <span class="code-operator">=</span> audio <span class="code-operator">+</span> drive<span class="code-operator">.</span><span class="code-function">square</span><span class="code-operator">(</span><span class="code-operator">)</span> <span class="code-operator">*</span> <span class="code-operator">(</span>audio <span class="code-operator">-</span> audio<span class="code-operator">.</span><span class="code-function">pow</span><span class="code-operator">(</span><span class="code-number">3</span><span class="code-operator">)</span><span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-number">3</span>
-<span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">where</span><span class="code-operator">(</span>drive <span class="code-operator">&lt;</span> <span class="code-number">1e-4</span><span class="code-operator">,</span> near_zero<span class="code-operator">,</span> shaped<span class="code-operator">)</span></code></pre>
-
-<p>Drive comes before the ADSR amplitude envelope. Finally, preset gain and MIDI velocity multiply the output level.</p>
+<p>At zero drive, the audio is unchanged. Drive comes before the ADSR envelope; preset gain and MIDI velocity set the final output level.</p>
 
 <p>With all the components in place, the complete synthesizer is simply a sequence of operations transforming the MIDI input and preset parameters into an audio waveform.</p>
 
