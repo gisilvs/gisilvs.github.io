@@ -207,3 +207,44 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
   .signal-node summary { gap: 6px; }
   .signal-sketch { width: 30px; height: 20px; flex-basis: 30px; }
 }
+
+/* Optional technical notes and small, readable scientific figures. */
+.deep-dive > summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; padding: 22px 24px; background: #f0f3ec; }
+.deep-dive > summary::-webkit-details-marker { display: none; }
+.deep-dive > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.deep-dive > summary h2 { margin: 0; font-size: 26px; }
+.deep-dive > summary small { display: block; margin-top: 12px; color: var(--muted); font: 13px/1.5 system-ui, sans-serif; }
+.deep-dive-body { padding-top: 28px; }
+.deep-dive-body h3 { margin: 38px 0 18px; font: normal 25px/1.4 Georgia, serif; }
+.deep-dive-body code { font: .82em/1.6 ui-monospace, monospace; }
+.deep-dive-body pre { margin: 0 0 26px; padding: 16px 18px; overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: #f0f3ec; font-size: 15px; line-height: 1.7; }
+.deep-dive-body pre code { font-size: 13px; }
+.deep-dive-body .code-source { margin-bottom: 6px; color: var(--muted); font: 12px/1.5 system-ui, sans-serif; }
+.display-math { overflow-x: auto; margin: 24px 0; }
+.math { font-size: .95em; }
+.waveform-figure, .envelope-figure { margin: 30px 0; }
+.waveform-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.waveform-card { margin: 0; border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+.waveform-card figcaption { font: 600 14px/1.5 system-ui, sans-serif; }
+.waveform-card img { display: block; width: 100%; height: auto; }
+.waveform-figure > figcaption { margin-top: 10px; color: var(--muted); font: 13px/1.6 system-ui, sans-serif; }
+.envelope-figure { border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
+.envelope-figure figcaption { font: 14px/1.6 system-ui, sans-serif; }
+.envelope-figure figcaption strong, .envelope-figure figcaption span { display: block; }
+.envelope-figure figcaption span { color: var(--muted); margin-top: 5px; }
+#envelope-plot { display: block; width: 100%; height: auto; margin: 16px 0; overflow: visible; }
+#envelope-grid { fill: var(--muted); font: 12px system-ui, sans-serif; }
+#envelope-grid line { stroke: var(--line); stroke-width: 1; }
+#envelope-curve { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+#envelope-note-off { stroke: #86672f; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.envelope-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; font: 13px/1.6 system-ui, sans-serif; }
+.envelope-controls label > span { display: flex; justify-content: space-between; gap: 8px; }
+.envelope-controls output { color: var(--muted); font-variant-numeric: tabular-nums; }
+.envelope-controls input { display: block; width: 100%; margin: 6px 0 0; accent-color: var(--accent); }
+@media (max-width: 480px) {
+  .waveform-grid, .envelope-controls { grid-template-columns: 1fr; }
+  .deep-dive > summary { padding: 18px; }
+  .deep-dive > summary h2 { font-size: 23px; }
+  .envelope-figure { padding: 14px; }
+  #envelope-grid { font-size: 20px; }
+}

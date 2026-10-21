@@ -6,7 +6,10 @@
   <meta name="description" content="Building Ava, a differentiable synthesizer that turns natural language descriptions into playable presets.">
   <title>Ava: Text-to-Synth — Gianluigi Silvestri</title>
   <link rel="canonical" href="https://gisilvs.github.io/blog/ava/">
-  <link rel="stylesheet" href="../../style.css?v=signal-sketches">
+  <link rel="stylesheet" href="../../style.css?v=deep-dive">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
+  <script defer src="deep-dive.js"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -140,6 +143,206 @@
         <p>Instead, the synthesizer receives pitch, velocity, and note-on/note-off events as separate MIDI inputs, while the neural network only predicts the preset parameters. This simplifies the learning problem, although it also means that we need to know the MIDI information associated with each training sample. We'll see later how I dealt with that.</p>
 
         <p>The resulting synth is intentionally quite limited compared to commercial synthesizers. There are no effects like reverb or chorus, no complex modulation matrix, and only two oscillators. But that's also part of the experiment: <strong>how much can we do with a relatively simple synthesis engine, and how well can a neural network learn to control it?</strong></p>
+      </section>
+
+      <section class="article-section deep-dive-section" aria-labelledby="deep-dive-title">
+        <details class="deep-dive" id="deep-dive">
+          <summary><h2 id="deep-dive-title">Deep Dive: Building a Differentiable Synthesizer in PyTorch<small>Optional · open to read</small></h2></summary>
+          <div class="deep-dive-body">
+<p>The main idea behind this project is that we want to use a synthesizer as a differentiable decoder. Given a set of parameters <span class="math">\theta</span> and MIDI information <span class="math">m</span>, the synthesizer produces an audio waveform:</p>
+
+<div class="math display-math">\hat{x} = S(\theta, m)</div>
+
+<p>We can then compare this waveform with a target recording and backpropagate the loss through the synthesizer to optimize its parameters, or train a neural network to predict them.</p>
+
+<p>Unlike a traditional neural network decoder, the synthesizer itself has no trainable weights. It&#x27;s just a collection of signal-processing operations, implemented in PyTorch so that gradients can flow through them.</p>
+
+<p>Most of these operations are relatively straightforward to differentiate. Others, particularly discrete waveform selection and recursive filtering, require a bit more care.</p>
+
+<h3 id="oscillators-and-waveform-selection">Oscillators and waveform selection</h3>
+
+<p>Let&#x27;s start with the oscillators. An oscillator generates a periodic waveform at a given frequency, determined by the incoming MIDI pitch. Ava supports four waveforms: sine, triangle, square, and sawtooth.</p>
+
+<p>For example, generating a sine wave is as simple as evaluating:</p>
+
+<div class="math display-math">x(t) = \sin(2\pi ft)</div>
+
+<p>The sine oscillator assumes zero initial phase and evaluates this directly. Here, <code>freq</code> has shape <code>[batch, 1]</code> and <code>time</code> has shape <code>[samples]</code>, so broadcasting produces one waveform per batch element.</p>
+
+<p class="code-source">From <code>synth/oscillators/sine.py</code></p>
+<pre><code class="language-python">def __call__(self, freq, time):
+    # Initial phase is zero when time starts at zero; no phase-offset control yet.
+    return torch.sin(2 * torch.pi * freq * time)</code></pre>
+
+<p>Square, triangle and sawtooth are approximated by sums of sine harmonics, rather than hard-edged phase functions. Square and triangle use odd harmonics up to the 31st; sawtooth uses every harmonic up to the 31st. Harmonics at or above Nyquist are excluded. For example, the square oscillator sums the allowed odd harmonics with amplitudes proportional to their reciprocal:</p>
+
+<p class="code-source">From <code>synth/oscillators/square.py</code></p>
+<pre><code class="language-python">harmonics = torch.arange(1, 32, 2, device=freq.device, dtype=freq.dtype)
+harmonics = harmonics.view(1, -1, 1)
+freq = freq.unsqueeze(1)
+time = time.unsqueeze(-2)
+allowed = freq * harmonics &lt; self.sample_rate / 2
+# Initial phase is zero when time starts at zero.
+waves = torch.sin(2 * torch.pi * freq * harmonics * time)
+return 4 / torch.pi * (allowed * waves / harmonics).sum(dim=1)</code></pre>
+
+<figure class="waveform-figure" aria-labelledby="waveforms-caption">
+  <div class="waveform-grid"><figure class="waveform-card"><figcaption>Sine</figcaption><img src="../../assets/waveform-sine.svg" alt="Two cycles of the sine oscillator at 200 Hz" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Triangle</figcaption><img src="../../assets/waveform-triangle.svg" alt="Two cycles of the triangle oscillator at 200 Hz" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Square</figcaption><img src="../../assets/waveform-square.svg" alt="Two cycles of the square oscillator at 200 Hz" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Sawtooth</figcaption><img src="../../assets/waveform-sawtooth.svg" alt="Two cycles of the sawtooth oscillator at 200 Hz" width="300" height="130" loading="lazy"></figure></div><figcaption id="waveforms-caption">Two cycles at 200 Hz, rendered by the actual oscillator classes at 24 kHz. The non-sine waves use finite harmonic sums.</figcaption></figure>
+
+<p>Things become more interesting when choosing which waveform to use.</p>
+
+<p>Waveform selection is a discrete operation: each oscillator must choose one of four possible waveforms. Unfortunately, a hard selection, such as taking the <code>argmax</code> of a neural network&#x27;s output, is not differentiable.</p>
+
+<p>One solution is to replace the hard selection with a softmax-weighted combination of all four waveforms:</p>
+
+<div class="math display-math">x(t)=\sum_{k=1}^{4}p_k x_k(t),
+\qquad
+p_k=\operatorname{softmax}(z)_k</div>
+
+<p>where <span class="math">z</span> represents the predicted logits and <span class="math">x_k(t)</span> the individual waveforms.</p>
+
+<p>The oscillator bank stacks the four candidates and combines them using <code>selection</code>, a tensor of weights shaped <code>[batch, 4]</code>. For soft selection, the caller supplies softmax probabilities:</p>
+
+<p class="code-source">From <code>synth/oscillators/bank.py</code></p>
+<pre><code class="language-python">waves = torch.stack([osc(freq, time) for osc in self.oscillators], dim=1)
+return (selection.unsqueeze(-1) * waves).sum(dim=1)</code></pre>
+
+<p>The bank&#x27;s internal order is sine, square, sawtooth, triangle. This is separate from the mix control, which crossfades between oscillator A and oscillator B.</p>
+
+<p>This makes waveform selection differentiable, but introduces a mismatch: during training, the oscillator can mix multiple waveforms, whereas in the final plugin we want to select a single waveform.</p>
+
+<p>An alternative is the <strong>straight-through estimator (STE)</strong>, which uses a hard selection during the forward pass but approximates its gradients with those of the soft selection.</p>
+
+<p>For one oscillator, the fitting code expresses this as:</p>
+
+<pre><code class="language-python">probability = raw.softmax(dim=-1)
+hard = torch.nn.functional.one_hot(probability.argmax(-1), 4).to(probability)
+controls[name] = hard + (probability - probability.detach())</code></pre>
+
+<p>Here, <code>raw</code> contains the four logits. The term in parentheses is zero in the forward pass, but keeps the softmax gradient. It is a surrogate gradient, not the derivative of the hard choice.</p>
+
+<p>I experimented with both approaches, and found that soft selection was generally more stable, while the straight-through estimator made optimization considerably less reliable. We&#x27;ll come back to this in the parameter recovery experiments.</p>
+
+<p>Before filtering, the second oscillator&#x27;s frequency is shifted by a factor of <span class="math">2^{\text{detune cents}/1200}</span>. The oscillator mix crossfades their outputs, and noise mix then blends in white noise.</p>
+
+<h3 id="adsr-envelope">ADSR envelope</h3>
+
+<p>An ADSR envelope determines how the volume of a note changes over time through four stages: attack, decay, sustain, and release.</p>
+
+<p>In Ava, I used exponential curves to control these transitions. Compared with linear ramps, they produce a more natural-sounding response and can still be implemented using differentiable operations.</p>
+
+<p>The important detail here is that the MIDI events determine <em>when</em> the note starts and stops, while the envelope parameters determine <em>how</em> the amplitude evolves.</p>
+
+<p>Since the MIDI timing is provided as an input, we only need to differentiate with respect to the envelope parameters, not the note-on and note-off events themselves.</p>
+
+<p>All transitions use the same normalized exponential curve, with a fixed curvature of 4:</p>
+
+<pre><code class="language-python">progress = progress.clamp(0, 1)
+curve = -torch.expm1(-self.curvature * progress) / -math.expm1(-self.curvature)</code></pre>
+
+<p>The curve rises from zero to one, reaching about 88% halfway through the transition. Attack uses it directly; decay moves from one toward sustain; release scales its complement by the level reached at note-off. The helper also explicitly sets completed transitions to one.</p>
+
+<p class="code-source">From <code>synth/envelopes/adsr.py</code></p>
+<pre><code class="language-python">held = self.held_level(time, attack, decay, sustain)
+# Release starts from the actual level, including during attack or decay.
+level_at_release = self.held_level(note_press_duration, attack, decay, sustain)
+tail = level_at_release * (1 - self.curve((time - note_press_duration) / release))
+return torch.where(time &lt; note_press_duration, held, tail)</code></pre>
+
+<p>Release starts from the actual envelope level, even if note-off arrives during attack or decay. It reaches zero after the release duration. The render duration controls the clip length separately, so a clip can end before the release does.</p>
+
+<figure id="envelope-figure" class="envelope-figure" aria-labelledby="envelope-caption">
+  <figcaption id="envelope-caption"><strong>Shape the envelope</strong><span>The dashed line marks note-off. Try releasing the note before the attack or decay finishes.</span></figcaption>
+  <svg id="envelope-plot" viewBox="0 0 640 210" role="img" aria-labelledby="envelope-plot-title"><title id="envelope-plot-title">ADSR amplitude over a six-second clip</title><g id="envelope-grid"><line x1="34" y1="176" x2="616" y2="176"/><text x="26" y="180" text-anchor="end">0</text><line x1="34" y1="96.0" x2="616" y2="96.0"/><text x="26" y="100.0" text-anchor="end">0.5</text><line x1="34" y1="16" x2="616" y2="16"/><text x="26" y="20" text-anchor="end">1</text><text x="34.0" y="198" text-anchor="middle">0</text><text x="131.0" y="198" text-anchor="middle">1</text><text x="228.0" y="198" text-anchor="middle">2</text><text x="325.0" y="198" text-anchor="middle">3</text><text x="422.0" y="198" text-anchor="middle">4</text><text x="519.0" y="198" text-anchor="middle">5</text><text x="616.0" y="198" text-anchor="middle">6 s</text></g><line id="envelope-note-off" y1="16" y2="176"/><path id="envelope-curve"/></svg>
+  <div class="envelope-controls"><label for="envelope-attack"><span>Attack <output for="envelope-attack" id="value-attack">0.30s</output></span><input id="envelope-attack" name="attack" type="range" min="0.02" max="2" step="0.01" value="0.3" data-unit="s"></label><label for="envelope-decay"><span>Decay <output for="envelope-decay" id="value-decay">0.70s</output></span><input id="envelope-decay" name="decay" type="range" min="0.02" max="2" step="0.01" value="0.7" data-unit="s"></label><label for="envelope-sustain"><span>Sustain <output for="envelope-sustain" id="value-sustain">0.55</output></span><input id="envelope-sustain" name="sustain" type="range" min="0" max="1" step="0.01" value="0.55" data-unit=""></label><label for="envelope-release"><span>Release <output for="envelope-release" id="value-release">1.50s</output></span><input id="envelope-release" name="release" type="range" min="0.05" max="2" step="0.01" value="1.5" data-unit="s"></label><label for="envelope-hold"><span>Note-off <output for="envelope-hold" id="value-hold">4.00s</output></span><input id="envelope-hold" name="hold" type="range" min="0.1" max="4" step="0.01" value="4" data-unit="s"></label></div><noscript>Enable JavaScript to adjust the envelope.</noscript></figure>
+
+<h3 id="low-pass-filter-and-lfo-modulation">Low-pass filter and LFO modulation</h3>
+
+<p>The filter was probably the most interesting component to implement.</p>
+
+<p>Ava uses a second-order resonant low-pass filter, also known as a <strong>biquad filter</strong>. It attenuates frequencies above a specified cutoff, while the resonance parameter controls the emphasis around that cutoff.</p>
+
+<p>A biquad filter can be expressed using the following recurrence:</p>
+
+<div class="math display-math">\begin{aligned}
+y[n] ={}&amp; b_0 x[n] + b_1 x[n-1] + b_2 x[n-2]\\
+       &amp;- a_1 y[n-1] - a_2 y[n-2]
+\end{aligned}</div>
+
+<p>The coefficients depend on the cutoff frequency and resonance Q. For a modulated filter, each coefficient is time-dependent; the recurrence uses the coefficient values for the current sample.</p>
+
+<p>Unlike these oscillators and envelopes, this biquad is recursive: each output sample depends not only on the input, but also on previous output samples. This makes it harder to implement efficiently using standard vectorized PyTorch operations.</p>
+
+<p>Things become even more complicated when we introduce the LFO.</p>
+
+<p>The LFO periodically modulates the filter cutoff, creating movement in the sound. In Ava, the modulation follows a sinusoidal curve, with its rate and depth controlled by two additional parameters. The depth is expressed in octaves, so the cutoff varies proportionally rather than by a fixed number of hertz:</p>
+
+<div class="math display-math">f_c(t) = f_{\text{base}}\,
+2^{d\sin(2\pi f_{\text{LFO}}t)}</div>
+
+<p>Here, the base cutoff is the played note&#x27;s frequency shifted by <code>cutoff_octaves</code>. Both the base offset and LFO depth are measured in octaves:</p>
+
+<pre><code class="language-python">update_times = time[::self.lfo_block_size]
+offset = offset + self.lfo(update_times, rate, depth)
+cutoff_hz = freq.double() * 2 ** offset</code></pre>
+
+<p>The LFO itself returns <code>depth * torch.sin(2 * torch.pi * rate * time)</code>. In the default configuration, coefficients update at <strong>200 Hz</strong>, not at every audio sample. At 24 kHz, each set lasts 120 samples. Setting the control rate to the audio sample rate gives sample-wise updates. The sinusoid is smooth, but the default filter coefficients are held between updates.</p>
+
+<p>These snippets use physical controls. The synth maps normalized Q outputs logarithmically to 0.5–10, and LFO rate to 0.5–10 Hz. At 24 kHz, the supported cutoff range is 20 Hz–10 kHz; decoded LFO depth is limited to two octaves or the available cutoff headroom, whichever is smaller.</p>
+
+<p>Fortunately, I didn&#x27;t have to implement differentiable recursive filtering from scratch. I used <strong><a href="https://github.com/DiffAPF/torchlpc">TorchLPC</a></strong>, which provides an efficient differentiable implementation of recursive linear filtering. This allowed me to compute gradients through the filter even with time-varying coefficients.</p>
+
+<p>The coefficients use the standard low-pass biquad equations. They are divided by the first denominator coefficient, so the recurrence has an implicit <span class="math">a_0=1</span>:</p>
+
+<p class="code-source">From <code>synth/filters/lowpass.py</code></p>
+<pre><code class="language-python">omega = 2 * torch.pi * cutoff_hz / self.sample_rate
+cosine = torch.cos(omega)
+alpha = torch.sin(omega) / (2 * q)
+a = torch.cat([1 + alpha, -2 * cosine, 1 - alpha], dim=-1)
+b = torch.cat([(1 - cosine) / 2, 1 - cosine, (1 - cosine) / 2], dim=-1)
+# Normalize so the first denominator coefficient is 1.
+return a / a[:, :1], b / a[:, :1]</code></pre>
+
+<p>For the time-varying path, the coefficient sets are repeated across their update intervals. In the following excerpt, <code>a</code> and <code>b</code> already have shape <code>[batch, samples, 3]</code>, and <code>x</code> is the input audio. The feedforward part is vectorized; TorchLPC handles the recursive denominator:</p>
+
+<p class="code-source">From <code>synth/filters/lowpass.py</code></p>
+<pre><code class="language-python"># Current and previous input samples, with zero history before the clip.
+padded = torch.nn.functional.pad(x, (2, 0))
+numerator = b[..., 0] * x + b[..., 1] * padded[:, 1:-1] + b[..., 2] * padded[:, :-2]
+# One recursive pass preserves history across every coefficient update.
+filtered = sample_wise_lpc(numerator.contiguous(), a[..., 1:].contiguous())</code></pre>
+
+<p>The leading denominator coefficient is omitted because it is one. The two preceding input samples are zero before the clip, and TorchLPC starts with zero recursive history. Importantly, there is <strong>one recursive pass across the whole clip</strong>: coefficient updates do not reset the filter state.</p>
+
+<p>The filter uses float64 internally to improve numerical stability at low cutoffs and high resonance, then casts its output back to the audio dtype. Without modulation, it instead uses <code>torchaudio.functional.lfilter</code>. Both paths preserve gradients through the audio and filter controls; the modulated path also connects them to LFO rate and depth.</p>
+
+<h3 id="drive-gain-and-putting-everything-together">Drive, gain, and putting everything together</h3>
+
+<p>The remaining components are relatively simple. Drive introduces nonlinear distortion, adding harmonics to the signal, while gain controls the final output level.</p>
+
+<p>Drive uses normalized hyperbolic-tangent saturation:</p>
+
+<div class="math display-math">y = \frac{\tanh(\text{drive}\,x)}{\tanh(\text{drive})}</div>
+
+<p>At zero drive, this expression has the identity mapping as its limit. The implementation uses a small-drive Taylor approximation to avoid division by zero while keeping both branches finite:</p>
+
+<p class="code-source">From <code>synth/effects/distortion.py</code></p>
+<pre><code class="language-python">safe_drive = drive.clamp_min(1e-4)
+shaped = torch.tanh(safe_drive * audio) / torch.tanh(safe_drive)
+near_zero = audio + drive.square() * (audio - audio.pow(3)) / 3
+return torch.where(drive &lt; 1e-4, near_zero, shaped)</code></pre>
+
+<p>Drive comes before the ADSR amplitude envelope. The final output is multiplied by both preset gain and MIDI velocity.</p>
+
+<p>With all the components in place, the complete synthesizer is simply a sequence of operations transforming the MIDI input and preset parameters into an audio waveform.</p>
+
+<p>The nice thing is that, from PyTorch&#x27;s perspective, the entire synthesizer behaves much like any other differentiable function. We can compute a loss on its output and use automatic differentiation to obtain gradients with respect to its input parameters.</p>
+
+<p>Of course, <strong>being differentiable doesn&#x27;t necessarily mean that the parameters are easy to optimize</strong>. Different parameter combinations can produce very similar sounds, and the loss landscape can contain local minima. Even if gradients exist, they might not always point us toward the parameters we actually want.</p>
+
+<p>So, before training any neural networks, the next question was: can we actually recover the synthesizer parameters by optimizing them directly?</p>
+          </div>
+        </details>
       </section>
     </article>
   </main>
