@@ -6,12 +6,13 @@
   <meta name="description" content="Building Ava, a differentiable synthesizer that turns natural language descriptions into playable presets.">
   <title>Ava: Turning Text into Synth Presets — Gianluigi Silvestri</title>
   <link rel="canonical" href="https://gisilvs.github.io/blog/ava/">
-  <link rel="stylesheet" href="../../style.css?v=article-introduction">
+  <link rel="stylesheet" href="../../style.css?v=article-structure">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
   <script defer src="deep-dive.js"></script>
   <script defer src="pretraining-plots.js"></script>
-  <link rel="stylesheet" href="listening.css?v=2">
+  <script defer src="article-navigation.js"></script>
+  <link rel="stylesheet" href="listening.css?v=3">
   <script type="module" src="listening.js?v=2"></script>
 </head>
 <body>
@@ -40,24 +41,44 @@
         <p>The results are far from perfect, but the sounds can be quite convincing! Along the way, I'll share how I built it, the experiments I ran, what worked (and what didn't), and a few interactive demos you can play with yourself.</p>
       </section>
 
+      <section class="article-section quick-listen" aria-labelledby="quick-listen">
+        <h2 id="quick-listen">A Quick Listen</h2>
+
+        <p>Before getting into the details, here's what Ava actually sounds like. Each example compares audio generated from a text description with Ava's attempt to recreate it using an editable synthesizer preset.</p>
+        <p>These are just a couple of examples from the test set. You can explore more sounds and play with the presets yourself in the full interactive demo below.</p>
+        <div class="quick-examples">
+          <div class="sound-card" data-example-id="069">
+            <div class="sound-card-heading"><h3>Warm analog bass</h3><span class="note-badge">A2</span></div>
+            <p class="sound-prompt">“a warm rounded analog bass with a soft edge, airy and breathy.”</p>
+            <div class="sound-player"><p>Generated reference</p><audio controls preload="metadata" src="../../assets/ava-gallery/069-reference.wav" aria-label="Quick listen, Warm analog bass: Generated reference">Your browser does not support audio playback.</audio></div>
+            <div class="sound-player"><p>Ava</p><audio controls preload="metadata" src="../../assets/ava-gallery/069-ava.wav" aria-label="Quick listen, Warm analog bass: Ava">Your browser does not support audio playback.</audio></div>
+            <details class="full-prompt"><summary>Full prompt</summary><p>A single isolated bass-inspired subtractive synthesizer note at A2 (MIDI 45, 110.00 Hz). Desired timbre: a warm rounded analog bass with a soft edge, airy and breathy. Dry and monophonic, triggered once, within a 6-second clip.</p></details>
+          </div>
+          <div class="sound-card" data-example-id="001">
+            <div class="sound-card-heading"><h3>Concert flute</h3><span class="note-badge">G♯4</span></div>
+            <p class="sound-prompt">“a clear bright concert flute with a smooth flowing tone, gently wavering.”</p>
+            <div class="sound-player"><p>Generated reference</p><audio controls preload="metadata" src="../../assets/ava-gallery/001-reference.wav" aria-label="Quick listen, Concert flute: Generated reference">Your browser does not support audio playback.</audio></div>
+            <div class="sound-player"><p>Ava</p><audio controls preload="metadata" src="../../assets/ava-gallery/001-ava.wav" aria-label="Quick listen, Concert flute: Ava">Your browser does not support audio playback.</audio></div>
+            <details class="full-prompt"><summary>Full prompt</summary><p>A single isolated flute-inspired subtractive synthesizer note at G#4 (MIDI 68, 415.30 Hz). Desired timbre: a clear bright concert flute with a smooth flowing tone, gently wavering. Dry and monophonic, triggered once, within a 6-second clip.</p></details>
+          </div>
+        </div>
+        <p><a href="#sound-gallery">Explore all examples and try the synth →</a></p>
+      </section>
+
       <nav class="article-contents article-section" aria-labelledby="contents">
         <h2 id="contents">Contents</h2>
         <ol>
           <li><a href="#preamble">Preamble</a></li>
           <li><a href="#the-synth">The Synth</a></li>
-          <li><a href="#deep-dive-title">Deep Dive: Building a Differentiable Synthesizer in PyTorch</a></li>
-          <li><a href="#is-differentiation-through-the-synth-effective">Is Differentiation Through the Synth Effective?</a></li>
-          <li><a href="#data-and-training-strategies">Learning Synth Parameters from Audio Latents</a></li>
-          <li><a href="#parameter-space-pretraining">Parameter-Space Pretraining</a></li>
-          <li><a href="#audio-reconstruction-loss">Can We Recover the Parameters with an Audio Reconstruction Loss?</a></li>
-          <li><a href="#text-conditioned-data-generation">Text-Conditioned Data Generation</a></li>
-          <li><a href="#audio-space-fine-tuning">Audio-Space Fine-Tuning</a></li>
+          <li><a href="#optimizing-synth-parameters-directly">Optimizing Synth Parameters Directly</a></li>
+          <li><a href="#learning-from-synthetic-audio">Learning from Synthetic Audio</a></li>
+          <li><a href="#training-with-an-audio-loss">Training with an Audio Loss</a></li>
+          <li><a href="#from-text-to-synth-presets">From Text to Synth Presets</a></li>
           <li><a href="#lets-have-a-listen">Results: Let's Have a Listen!</a></li>
-          <li><a href="#deployment-to-cpp">Deployment to C++: From Model to Plugin</a></li>
+          <li><a href="#bringing-ava-to-cpp">Bringing Ava to C++</a></li>
           <li><a href="#conclusions">Conclusions</a></li>
-          <li><a href="#a-note-on-using-llms">A Note on Using LLMs</a></li>
-          <li><a href="#references">References</a></li>
         </ol>
+        <p class="contents-extra"><a href="#a-note-on-using-llms">Afterword: A Note on Using LLMs</a> · <a href="#references">References</a></p>
       </nav>
 
       <section class="article-section" aria-labelledby="preamble">
@@ -174,11 +195,10 @@
         <p>Instead, the synthesizer receives pitch, velocity, and note-on/note-off events as separate MIDI inputs, while the neural network only predicts the preset parameters. This simplifies the learning problem, although it also means that we need to know the MIDI information associated with each training sample. We'll see later how I dealt with that.</p>
 
         <p>The resulting synth is intentionally quite limited compared to commercial synthesizers. There are no effects like reverb or chorus, no complex modulation matrix, and only two oscillators. But that's also part of the experiment: <strong>how much can we do with a relatively simple synthesis engine, and how well can a neural network learn to control it?</strong></p>
-      </section>
 
-      <section class="article-section deep-dive-section" aria-labelledby="deep-dive-title">
+        <div class="deep-dive-section">
         <details class="deep-dive" id="deep-dive">
-          <summary><h2 id="deep-dive-title">3. Deep Dive: Building a Differentiable Synthesizer in PyTorch<small>Optional · open to read</small></h2></summary>
+          <summary><h3 id="deep-dive-title">Deep Dive: Differentiable Synthesis in PyTorch<small>Optional · open to read</small></h3></summary>
           <div class="deep-dive-body">
 <p>The main idea behind this project is that we want to use a synthesizer as a differentiable decoder. Given a set of parameters <span class="math">\theta</span> and MIDI information <span class="math">m</span>, the synthesizer produces an audio waveform:</p>
 
@@ -449,10 +469,11 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 <p>So, before training any neural networks, the next question was: can we actually recover the synthesizer parameters by optimizing them directly?</p>
           </div>
         </details>
+        </div>
       </section>
 
-      <section class="article-section recovery-section" aria-labelledby="is-differentiation-through-the-synth-effective">
-        <h2 id="is-differentiation-through-the-synth-effective">4. Is Differentiation Through the Synth Effective?</h2>
+      <section id="is-differentiation-through-the-synth-effective" class="article-section recovery-section" aria-labelledby="optimizing-synth-parameters-directly">
+        <h2 id="optimizing-synth-parameters-directly">3. Optimizing Synth Parameters Directly</h2>
 
         <p>Now that we have a differentiable synthesizer, the first question is whether we can actually recover its parameters through gradient descent. Just because an operation is differentiable doesn't necessarily mean it's easy to optimize.</p>
 
@@ -532,27 +553,25 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>Parameter recovery and audio reconstruction are also different goals. Multiple presets can produce similar waveforms, so a low audio loss doesn't guarantee recovery of the original values. Both matter when interpreting these experiments.</p>
 
-        <p>Fortunately, our ultimate goal isn't to optimize a new set of parameters from scratch for every sound. Instead, we want to train a neural network that predicts them directly. By learning from many examples, it might provide a useful starting point without requiring a separate optimization for each sound.</p>
-
-        <p>Before moving to audio reconstruction losses, though, I wanted to answer a simpler question: can a neural network learn to recover the original synthesizer parameters directly from an audio representation?</p>
+        <p>Rather than repeat this optimization for every sound, I next trained a network to predict presets from audio.</p>
       </section>
 
-      <section class="article-section learning-section" aria-labelledby="data-and-training-strategies">
-        <h2 id="data-and-training-strategies">5. Learning Synth Parameters from Audio Latents</h2>
+      <section id="data-and-training-strategies" class="article-section learning-section" aria-labelledby="learning-from-synthetic-audio">
+        <h2 id="learning-from-synthetic-audio">4. Learning from Synthetic Audio</h2>
 
-        <p>To predict a preset from audio, we first need a useful representation of the sound. I chose a <strong>pretrained audio encoder</strong>: training one myself was beyond the scope and computational budget of this project, and learning from compact latents is much more feasible than working with raw waveforms. Some encoders also share their latent space with text-to-audio generators, which would give us a way to generate presets from text later.</p>
+        <p>Before trying to reconstruct sounds from a text-to-audio model, I wanted to start with something simpler: can a neural network recover the parameters of sounds generated by our own synthesizer?</p>
 
-        <p>But do these latents preserve the details needed to recover our synth parameters? To test this, I trained a network to predict the preset from an encoded sound, using sounds generated by Ava itself. That way, we know the original settings and can compare the predictions directly against them.</p>
+        <p>This gives us two advantages. We can generate as much training data as we need, with the original parameters available as ground truth, and train the network directly on those parameters without rendering audio at every training step. It's also a useful way to check whether the pretrained audio representation preserves enough information to recover the synth controls.</p>
 
-        <h3>Data</h3>
+        <h3>Generating and Encoding the Data</h3>
 
-        <p>Since we already have a synthesizer, we can generate our own recordings: sample a preset and a MIDI note, render the sound, and keep the preset as ground truth.</p>
+
 
         <p>I generated <strong>100,000 training examples, 10,000 validation examples and 10,000 test examples</strong>, each with a new preset. Pitches were sampled uniformly from MIDI 21–78; velocity stayed fixed. Each clip lasts six seconds, with the key held for four seconds and two seconds left for the release tail.</p>
 
         <p>The sampling isn't uniform for every control. Envelope times, resonance and LFO rate use log-uniform sampling; the other controls use linear-uniform sampling within chosen ranges. The cutoff range also leaves room for the LFO sweep. The 16 ordered oscillator pairs are balanced within each split.</p>
 
-        <h3>From audio to latents</h3>
+        <p>To predict a preset from audio, we first need a useful representation of the sound. I chose a <strong>pretrained audio encoder</strong>: training one myself was beyond the scope and computational budget of this project, and learning from compact latents is much more feasible than working with raw waveforms. Some encoders also share their latent space with text-to-audio generators, which would give us a way to generate presets from text later.</p>
 
         <p>A six-second waveform at 24 kHz contains 144,000 samples. Rather than learn from those samples directly, I used a pretrained audio encoder to produce a shorter sequence for our prediction network.</p>
 
@@ -571,16 +590,11 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
           <p class="data-targets">Original preset → 13 continuous targets + two waveform labels</p>
           <figcaption id="data-pipeline-caption">The latents become the network input; the preset supplies the supervision. MIDI is saved for rendering and target conversion, but isn't an additional network input.</figcaption>
         </figure>
-      </section>
-
-      <section class="article-section learning-section" aria-labelledby="parameter-space-pretraining">
-        <h2 id="parameter-space-pretraining">6. Parameter-Space Pretraining</h2>
-
-        <p>With these labeled examples, we can start by predicting the original parameters directly. <strong>No audio needs to be rendered for the training updates</strong>, so this stage is much cheaper than learning through the synthesizer.</p>
 
         <p>I ran this stage, including data generation, encoding and parameter-supervised training, on my MacBook M1 Pro.</p>
 
-        <h3>A small Transformer</h3>
+        <span class="anchor-alias" id="parameter-space-pretraining" aria-hidden="true"></span>
+        <h3>Predicting the Synth Parameters</h3>
 
         <p>I used a small Transformer with <strong>about 440,000 parameters</strong>. It maps the latent sequence to 13 continuous controls in <span class="math">[0,1]</span> through sigmoid activations, and four logits for each oscillator. Softmax turns each set of logits into waveform probabilities; cross-entropy uses the logits directly.</p>
 
@@ -595,7 +609,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>Here, <span class="math">u</span> and <span class="math">\hat u</span> are the target and predicted normalized controls. Both loss terms are also averaged over the batch.</p>
 
-        <h3>How well does it recover the parameters?</h3>
+        <h3>How Well Does It Work?</h3>
 
         <p>I trained for 200 epochs, using an exponential moving average of the weights for evaluation, and selected the checkpoint with the lowest validation parameter MSE. On the 10,000 test examples, the overall normalized parameter RMSE was <strong>0.0488</strong>. Waveform accuracy was <strong>92.7% for oscillator A, 93.2% for B, and 86.6% for getting both right</strong>. Most waveform misclassifications were between sine and triangle (about 84% of the errors across the two oscillators).</p>
 
@@ -632,7 +646,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>LFO rate and decay remain the hardest controls, while release, gain, attack and cutoff are recovered more accurately. Detuning's error corresponds to about 1.37 cents. These results show that the encoder and mapper together recover useful information; they don't isolate whether remaining errors come from the representation, network capacity or ambiguity in the sounds. For example, a high filter cutoff can be difficult to infer when there is little high-frequency energy to remove.</p>
 
-        <h3>Listening to the predictions</h3>
+        <h3>Listening to the Reconstructions</h3>
 
         <p>Here are four held-out test previews at different pitches. Both versions use the same MIDI note and timing.</p>
 
@@ -684,17 +698,14 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
         </div>
 
         <p>The fourth example gets both waveforms right, but predicts an LFO rate of 4.68 Hz instead of 3.13 Hz. The preset comparisons make these differences easier to inspect alongside the audio.</p>
-
-        <h3>Why not stop here?</h3>
-
-        <p>Parameter supervision treats all normalized controls equally, but equal parameter errors don't imply equal changes in sound. It also ties us to examples with known presets. Sounds from an external text-to-audio model won't come with those labels, and may not be exactly reproducible by Ava.</p>
-
-        <p>The next step is therefore to train through the synthesizer: <strong>compare the audio produced by the predicted preset with the target sound</strong>, instead of comparing their parameter values.</p>
       </section>
-      <section class="article-section learning-section" aria-labelledby="audio-reconstruction-loss">
-        <h2 id="audio-reconstruction-loss">7. Can We Recover the Parameters with an Audio Reconstruction Loss?</h2>
 
-        <p>The parameter-supervised experiment gives us confidence that the latents contain most of the information we need. Training with an audio loss is much more expensive, but it lets us learn from recordings without preset labels, provided the synth is flexible enough to reproduce their sounds.</p>
+      <section id="audio-reconstruction-loss" class="article-section learning-section" aria-labelledby="training-with-an-audio-loss">
+        <h2 id="training-with-an-audio-loss">5. Training with an Audio Loss</h2>
+
+        <p>The parameter-supervised model is a useful starting point, but it relies on knowing the original preset. To learn from recordings without these labels, we need to train the network by comparing the audio produced by its predicted parameters with the target recording.</p>
+
+        <p>I first tested this on sounds generated by Ava itself. In this setting, we know the target can be reproduced exactly, which makes it easier to evaluate how well audio-loss training works before moving to text-generated sounds.</p>
 
         <h3>Moving to a spectral loss</h3>
 
@@ -765,12 +776,17 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
           </div>
         </div>
 
-        <p>To my ears, the fine-tuned examples sound a little closer to the originals, despite the drop in parameter accuracy. Recovering the original parameters and reconstructing the sound are different goals. For text-generated audio, we won't have preset labels at all: we'll be looking for a good approximation within Ava's capabilities. That's the next step.</p>
+        <p>To my ears, the fine-tuned examples sound a little closer to the originals, despite the drop in parameter accuracy.</p>
       </section>
-      <section class="article-section" aria-labelledby="text-conditioned-data-generation">
-        <h2 id="text-conditioned-data-generation">8. Text-Conditioned Data Generation</h2>
 
-        <p>So far, we've only reconstructed sounds produced by our own synthesizer. To move to <strong>text-to-synth</strong>, we need sounds paired with natural-language descriptions, including timbres that Ava might only be able to approximate.</p>
+      <section id="text-conditioned-data-generation" class="article-section learning-section" aria-labelledby="from-text-to-synth-presets">
+        <h2 id="from-text-to-synth-presets">6. From Text to Synth Presets</h2>
+
+        <p>So far, we've only worked with sounds generated by Ava itself. But to build a text-to-synth system, we need to learn from sounds that weren't necessarily created by our synthesizer, ideally covering a much wider range of timbres.</p>
+
+        <p>Instead of collecting recordings and writing descriptions by hand, I used a pretrained text-to-audio model to generate the training data. The goal is then to find a synthesizer preset that approximates each generated sound as closely as possible.</p>
+
+        <h3>Generating Audio from Text</h3>
 
         <p>I used <strong><a href="https://huggingface.co/stabilityai/stable-audio-3-small-sfx">Stable Audio 3 Small SFX</a></strong><sup><a href="#ref-stable-audio-3" aria-label="Reference 4: Stable Audio 3">[4]</a></sup>, a transformer-based latent diffusion model operating in the SAME-S latent space. I run its generator for <strong>eight sampling steps</strong>, starting from random noise and refining it according to the prompt. The resulting latent can be passed directly to our parameter mapper and to the pretrained audio decoder, which produces the reconstruction target used as ground truth.</p>
 
@@ -783,7 +799,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
           <figcaption id="text-generation-pipeline-caption">Each accepted latent is paired with its decoded audio and the note settings needed to render the synth.</figcaption>
         </figure>
 
-        <h3>Generating single-note sounds</h3>
+
 
         <p>For this experiment, I decided to start with eight instrument families: bass, piano, guitar, trumpet, flute, strings, synth lead and pad. I put together a small collection of descriptions for each family, then combined them with optional modifiers, such as “warm and fuzzy,” and notes sampled from that instrument's range.</p>
 
@@ -802,7 +818,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>The dataset contains <strong>10,000 training examples, 1,000 validation examples and 1,000 test examples</strong>.</p>
 
-        <h3>Pitch and note timing</h3>
+        <h3>Pitch and Note Timing</h3>
 
         <p>The prompt tells the generator which note to play, but it doesn't always get it right. I use <strong>CREPE</strong>, through <a href="https://github.com/maxrmorrison/torchcrepe">torchcrepe</a><sup><a href="#ref-torchcrepe" aria-label="Reference 6: torchcrepe">[6]</a></sup>, to check the decoded audio. After ignoring quiet sections and unreliable estimates, I keep sounds whose pitch stays close to the requested note. The synth then uses the <strong>median detected frequency in hertz</strong>, without rounding it to a MIDI key.</p>
 
@@ -810,7 +826,9 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>I kept note timing simple: the note starts at the beginning of the six-second clip and is released at four seconds. This is an assumption; note-on and note-off aren't estimated from the generated recording. A natural next step would be to specify note duration in the prompts and extend the checks to account for onset and release, so the synth can follow each sound more closely.</p>
 
-        <h3>Training on the generated pairs</h3>
+        <p>CREPE checks the training dataset. In the desktop plugin, <strong>neither the audio decoder nor the pitch tracker is needed</strong>: the keyboard supplies pitch, velocity and note timing. An instrument's default pitch is included in the text prompt, but it doesn't restrict which notes the resulting preset can play.</p>
+
+        <h3>Training the Parameter Mapper</h3>
 
         <p>Once these examples are ready, we can use them to train the mapper. Each latent is paired with its decoded mono audio at 24 kHz, plus the pitch and note timing. The mapper takes the original <strong>256 × 66 latent</strong> directly, with no normalization or additional encoding.</p>
 
@@ -821,18 +839,10 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
           <figcaption id="text-mapper-training-caption">The mapper learns to predict a preset by comparing its rendered sound with the decoded target. Pitch and timing enter the synth separately.</figcaption>
         </figure>
 
-        <p>At deployment, the C++ plugin also passes the raw latent directly to the exported mapper. <strong>Neither the audio decoder nor the pitch tracker is needed</strong>: the keyboard supplies pitch, velocity and note timing. An instrument's default pitch is included in the text prompt, but it doesn't restrict which notes the resulting preset can play.</p>
+        <p>At deployment, the C++ plugin also passes the raw latent directly to the exported mapper.</p>
 
-        <p>We now have everything needed to learn from text-generated sounds. The next question is how closely Ava can approximate them, and whether starting from parameter-supervised weights still helps.</p>
-      </section>
-      <section class="article-section" aria-labelledby="audio-space-fine-tuning">
-        <h2 id="audio-space-fine-tuning">9. Audio-Space Fine-Tuning</h2>
-
-        <p>With the generated dataset in place, I could finally train the mapper on sounds that weren't made by Ava. There are no correct preset labels to recover here: the goal is to find a good approximation within the synth's capabilities.</p>
-
-        <p>The training loop is the same as in the synthetic audio-loss experiment: predict a preset, render it through the differentiable synth, and compare the result with the target using the long-window STFT and log-mel loss.</p>
-
-        <h3>Does parameter-space pretraining help?</h3>
+        <span class="anchor-alias" id="audio-space-fine-tuning" aria-hidden="true"></span>
+        <h3>Does Pretraining Help?</h3>
 
         <p>The parameter-pretrained network already knows something about the synth controls, which seems like a useful starting point. But it learned from randomly sampled synthetic presets. The text-generated sounds are more varied, and many can't be reproduced exactly by Ava. Pretraining might help, or it might steer the model towards settings that worked better for the earlier dataset.</p>
 
@@ -848,12 +858,26 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
         </table>
 
         <p>The best scratch model reached <strong>1.888</strong>, compared with <strong>1.901</strong> for the best fine-tuned model: about <strong>0.6% lower</strong>. Pretraining helped at the lower learning rate, but provided no benefit at the higher one. The differences were relatively small, and since we only ran one seed per configuration, it's difficult to draw strong conclusions. Still, pretraining seems to offer less of an advantage here than it did when reconstructing our synthetic data.</p>
+      </section>
 
-        <h3>Listening to the results</h3>
+      <section class="article-section listening-section" aria-labelledby="lets-have-a-listen">
+        <h2 id="lets-have-a-listen">7. Results: Let's Have a Listen!</h2>
 
-        <p>Spectral loss is useful for comparing runs, but the real question is how the presets sound. Here are four test examples, using each strategy's best validation model: fine-tuning at <span class="math">10^{-4}</span> and training from scratch at <span class="math">10^{-3}</span>. Both render discrete oscillator choices, and the clips keep their original levels. The piano reference was decoded again from its saved test latent.</p>
+        <p>Enough about losses. Pick an instrument and have a listen: each description comes with the text-generated reference and Ava's attempt to recreate it. All the Ava clips in the main gallery use the best network trained from scratch.</p>
 
-        <div class="pretraining-examples" id="text-audio-previews">
+        <div id="instrument-tabs" class="instrument-tabs" role="group" aria-label="Choose an instrument family"></div>
+        <p id="gallery-loading" role="status">Loading the sounds…</p>
+        <div id="sound-gallery" class="sound-gallery" aria-label="Sound examples"></div>
+        <noscript><p>Enable JavaScript to browse the gallery and play the synth. The quick preview and the training-strategy comparisons work without it.</p></noscript>
+        <p class="gallery-note">These are held-out test examples, chosen for variety rather than ranked by reconstruction quality. References were decoded from their saved latents; the clips haven't been loudness-matched.</p>
+
+        <details class="strategy-comparison" id="comparing-training-strategies">
+          <summary><h3>Comparing Training Strategies</h3></summary>
+          <div class="strategy-comparison-body">
+            <p>To hear how initialization affects the results, here are four examples comparing the best model fine-tuned from parameter supervision with the best model trained from scratch. Each is shown alongside the original text-generated reference.</p>
+            <p>The examples come from the held-out test set, and the recordings haven't been loudness-matched.</p>
+            <p>The fine-tuned model uses a learning rate of <span class="math">10^{-4}</span>, and the scratch model uses <span class="math">10^{-3}</span>. Both use discrete oscillator choices. The piano reference was decoded again from its saved test latent.</p>
+            <div class="pretraining-examples" id="text-audio-previews">
           <div class="pretraining-example">
             <h4>Guitar · D♯4</h4>
             <p>“a fuzzy garage guitar with a thick buzzing tone, hollow and woody.”</p>
@@ -892,26 +916,17 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
           </div>
         </div>
 
-        <p>Overall, I think the fit is decent. The reconstructions don't capture every detail, but they often get close enough to give us something useful to play and tweak. Some of the remaining differences likely come from Ava's limited range of sounds, and some from the difficulty of training through the synth: even when a closer match is possible, finding it isn't always easy.</p>
-      </section>
-      <section class="article-section listening-section" aria-labelledby="lets-have-a-listen">
-        <h2 id="lets-have-a-listen">10. Results: Let's Have a Listen!</h2>
+            <p>Overall, I think the fit is decent. The reconstructions don't capture every detail, but they often get close enough to give us something useful to play and tweak. Some of the remaining differences likely come from Ava's limited range of sounds, and some from the difficulty of training through the synth: even when a closer match is possible, finding it isn't always easy.</p>
+          </div>
+        </details>
 
-        <p>Enough about losses. Pick an instrument and have a listen: each description comes with the text-generated reference and Ava's attempt to recreate it. All the Ava clips below use the best network trained from scratch.</p>
-
-        <div id="instrument-tabs" class="instrument-tabs" role="group" aria-label="Choose an instrument family"></div>
-        <p id="gallery-loading" role="status">Loading the sounds…</p>
-        <div id="sound-gallery" class="sound-gallery" aria-label="Sound examples"></div>
-        <noscript><p>Enable JavaScript to browse the gallery and play the synth. The audio comparisons in the previous section work without it.</p></noscript>
-        <p class="gallery-note">These are held-out test examples, chosen for variety rather than ranked by reconstruction quality. References were decoded from their saved latents; the clips haven't been loudness-matched.</p>
-
-        <h3>Where things go off track</h3>
+        <h3>Where Things Go Off Track</h3>
 
         <p>Some of the references already miss the intended sound. To my ears, the generated guitars and pianos often sound surprisingly similar. The bamboo flute example also slipped through the pitch check, so that check needs improvement too. Better prompts and more reliable generation would help us start with more convincing, distinct sounds.</p>
 
         <p>Ava also seems to reproduce some kinds of sounds more faithfully than others, regardless of the instrument label. Plucky sounds, complex distortion and changing dynamics seem harder to capture in these examples. Some of this comes from the synth's limits, and some from the difficulty of training it to find a good fit.</p>
 
-        <h3>Play and tweak the presets</h3>
+        <h3>Play and Tweak the Presets</h3>
 
         <p>The fun part is that these aren't just audio samples. Load a preset from the gallery, play it at another pitch, or turn a few knobs and take it somewhere else.</p>
 
@@ -969,8 +984,9 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>Overall, I'm quite happy with some of the bass, piano, flute and trumpet examples. The other families still need some work, although even the less faithful reconstructions can be interesting sounds in their own right. It's not always the preset I had in mind, but it's already a fun tool to play with.</p>
       </section>
-      <section class="article-section" aria-labelledby="deployment-to-cpp">
-        <h2 id="deployment-to-cpp">11. Deployment to C++: From Model to Plugin</h2>
+
+      <section id="deployment-to-cpp" class="article-section" aria-labelledby="bringing-ava-to-cpp">
+        <h2 id="bringing-ava-to-cpp">8. Bringing Ava to C++</h2>
 
         <p>I'd already started a C++ version back in 2024, but it needed updating to match the synth we'd trained. I kept the audio engine independent of <strong>JUCE</strong>, which handles the plugin interface and MIDI integration.</p>
 
@@ -990,8 +1006,9 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
         <p>The <a href="https://github.com/gisilvs/ava-torch">PyTorch synth and training code</a> and the <a href="https://github.com/gisilvs/ava-cpp">C++ plugin source</a> are on GitHub, with the trained mapper weights. The C++ README explains how to build and install the plugin.</p>
         <p><em>TODO: add the packaged plugin download.</em></p>
       </section>
+
       <section class="article-section" aria-labelledby="conclusions">
-        <h2 id="conclusions">12. Conclusions</h2>
+        <h2 id="conclusions">9. Conclusions</h2>
 
         <p>So, did it work? Well, sort of!</p>
 
@@ -1007,8 +1024,9 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>Ava is still far from replacing the endless scrolling through presets that originally motivated the project. But it feels like a promising starting point, and there's something quite satisfying about describing a sound in words and seeing a synthesizer try to bring it to life.</p>
       </section>
+
       <section class="article-section" aria-labelledby="a-note-on-using-llms">
-        <h2 id="a-note-on-using-llms">13. A Note on Using LLMs</h2>
+        <h2 id="a-note-on-using-llms">Afterword: A Note on Using LLMs</h2>
 
         <p>I started this project in 2024, when coding assistants weren't nearly as capable as they are today. Back then, I implemented the C++ synthesizer myself, following <a href="https://www.theaudioprogrammer.com/books-and-courses/synth-plugin-book">The Audio Programmer's book</a>, with a few modifications and a rather ugly interface. I also added a way to load an audio sample into the plugin and use a trained PyTorch network to predict its synth parameters, and wrote most of the differentiable synth and training pipeline. I stopped before finishing the low-pass filter and LFO, and the project sat unfinished for almost two years.</p>
 
@@ -1020,6 +1038,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>Using these tools was an interesting experiment in itself. They made it much easier to return to an old project, try different ideas and finally finish it. I still had to understand the code, listen to the sounds and decide what the results meant, but the help made the whole process faster and more enjoyable.</p>
       </section>
+
       <section class="article-section references-section" aria-labelledby="references">
         <h2 id="references">References</h2>
         <ol>

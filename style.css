@@ -213,7 +213,7 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .deep-dive > summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; padding: 22px 24px; background: #f0f3ec; }
 .deep-dive > summary::-webkit-details-marker { display: none; }
 .deep-dive > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-.deep-dive > summary h2 { margin: 0; font-size: 26px; }
+.deep-dive > summary h3 { margin: 0; font-size: 26px; }
 .deep-dive > summary small { display: block; margin-top: 12px; color: var(--muted); font: 13px/1.5 system-ui, sans-serif; }
 .deep-dive-body { padding-top: 28px; }
 .deep-dive-body h3 { margin: 38px 0 18px; font: normal 25px/1.4 Georgia, serif; }
@@ -245,7 +245,7 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 @media (max-width: 480px) {
   .waveform-grid, .envelope-controls { grid-template-columns: 1fr; }
   .deep-dive > summary { padding: 18px; }
-  .deep-dive > summary h2 { font-size: 23px; }
+  .deep-dive > summary h3 { font-size: 23px; }
   .envelope-figure { padding: 14px; }
   #envelope-grid { font-size: 20px; }
 }
@@ -336,3 +336,15 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .article-contents ol { margin: 0; padding-left: 26px; }
 .article-contents li { padding-left: 4px; margin-bottom: 6px; }
 .article-contents a:hover { text-decoration: underline; }
+
+/* A compact first listen; the full gallery remains further down the article. */
+.quick-examples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 22px 0; }
+.quick-listen .sound-card { padding: 16px; min-width: 0; }
+.quick-listen .sound-card h3 { margin: 0; font: 600 16px/1.4 system-ui, sans-serif; }
+.quick-listen .sound-card .sound-prompt { min-height: 0; margin: 12px 0 16px; font-size: 14px; line-height: 1.6; }
+.quick-listen audio { min-width: 0; }
+.article-contents .contents-extra { margin: 16px 0 0; font-size: 15px; }
+.deep-dive-section { margin-top: 32px; }
+.anchor-alias { display: block; }
+.article-section[id], .article-section h2[id], .anchor-alias, #sound-gallery { scroll-margin-top: 24px; }
+@media (max-width: 600px) { .quick-examples { grid-template-columns: 1fr; } }

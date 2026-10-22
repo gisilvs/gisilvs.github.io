@@ -110,3 +110,10 @@
   .demo-key span { font-size: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .demo-meter::after { transition: none; } }
+
+/* Optional comparisons sit between the gallery and the listening notes. */
+.strategy-comparison { margin: 30px 0; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.strategy-comparison > summary { cursor: pointer; }
+.strategy-comparison > summary h3 { display: inline; margin: 0; font-size: 22px; }
+.strategy-comparison > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+.strategy-comparison-body { padding-top: 22px; }
