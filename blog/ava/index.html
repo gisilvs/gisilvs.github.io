@@ -810,10 +810,6 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>For each, I tried learning rates of <span class="math">10^{-3}</span> and <span class="math">10^{-4}</span>. All four runs used the same 440k-parameter Transformer, 10,000 training sounds, AdamW, batch size 128 and 200 epochs. Each run took about <strong>5.5–6.2 hours on an A100 40 GB</strong>.</p>
 
-        <figure class="pretraining-errors" id="text-audio-training-comparison" aria-labelledby="text-audio-training-caption">
-          <img src="../../assets/text-audio-training-comparison.svg?v=validation-only" width="740" height="300" loading="lazy" alt="Validation audio losses over 200 epochs for fine-tuning and training from scratch at learning rates 0.001 and 0.0001. Logarithmic axes show close final losses for all four runs.">
-          <figcaption id="text-audio-training-caption">Validation uses discrete oscillator choices and EMA weights. Dots mark the selected checkpoints; axes are logarithmic.</figcaption>
-        </figure>
 
         <p>I selected each checkpoint by validation loss, then evaluated it on the same 1,000 held-out sounds:</p>
         <table class="experiment-results">
