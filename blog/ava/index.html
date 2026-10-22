@@ -683,7 +683,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
           <figcaption id="pretraining-errors-caption">Test-set RMSE in the network's normalized control coordinates, before conversion to physical units. Lower is better. Results use the EMA checkpoint selected at epoch 196.</figcaption>
         </figure>
 
-        <p>LFO rate and decay were the hardest parameters, while release, gain, attack, and cutoff were recovered more accurately. The detuning error, for example, corresponds to around 1.37 cents.</p>
+        <p>LFO rate and decay were the hardest parameters, while release, gain, attack, and cutoff were recovered more accurately.</p>
 
         <p>The scatter plots below show how predictions compare with their targets across the entire test set.</p>
 
@@ -779,7 +779,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>Instead, training needs to compare the audio produced by the predicted preset with the target recording.</p>
 
-        <p>I first tested this on the synthetic dataset, where an exact reconstruction is possible. This provided a controlled setting for evaluating audio-loss training before moving to text-generated sounds.</p>
+        <p>I first tested this on the synth-generated dataset, where an exact reconstruction is possible. This provided a controlled setting for evaluating audio-loss training before moving to text-generated sounds.</p>
 
         <h3>Moving to a Spectral Loss</h3>
 
