@@ -518,19 +518,21 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
       <section id="is-differentiation-through-the-synth-effective" class="article-section recovery-section" aria-labelledby="optimizing-synth-parameters-directly">
         <h2 id="optimizing-synth-parameters-directly">3. Optimizing Synth Parameters Directly</h2>
 
-        <p>Now that we have a differentiable synthesizer, the first question is whether we can actually recover its parameters through gradient descent. Just because an operation is differentiable doesn't necessarily mean it's easy to optimize.</p>
+        <p>Before training a neural network, I wanted to check whether the synth parameters could actually be recovered through gradient descent.</p>
 
-        <p>To test this, I started with a simple experiment. First, I chose a synthesizer preset and used it to generate target audio. Then, I randomly initialized the parameter I wanted to recover and optimized it by gradient descent to reproduce the target, keeping all other parameters fixed.</p>
+        <p>The experiment was simple: I chose a preset, generated a reference sound, and then tried to recover its parameters by minimizing the difference between the reference and reconstructed audio. I started by optimizing one parameter at a time, keeping the others fixed at their ground-truth values, before moving to multiple parameters.</p>
 
-        <p>The objective was simply to minimize the mean squared error (MSE) between the target and reconstructed waveforms:</p>
+        <p>For now, I used the mean squared error (MSE) between the two waveforms:</p>
 
         <div class="math display-math">\mathcal{L}_{\mathrm{MSE}}=\frac{1}{T}\sum_{t=1}^{T}\left(x_t-S(\theta,m)_t\right)^2</div>
 
-        <p>Here, <span class="math">x</span> is the target audio, <span class="math">T</span> is its number of samples, <span class="math">S</span> is our synthesizer, <span class="math">\theta</span> is the preset, and <span class="math">m</span> is the MIDI input. Only the chosen entries of <span class="math">\theta</span> are optimized; the rest stay at their ground-truth values.</p>
+        <p>Here, <span class="math">x</span> is the reference audio, <span class="math">S(\theta,m)</span> is the reconstructed waveform, and <span class="math">T</span> is the number of audio samples.</p>
 
         <h3>Why use MSE for audio?</h3>
 
-        <p>Waveform MSE is generally a poor measure of perceptual similarity. It's extremely sensitive to phase and temporal alignment: two signals that sound almost identical can have a large MSE if one is shifted by just a few samples. This is particularly problematic for audio generation, where we often care more about how a sound is perceived than exact waveform correspondence.</p>
+        <p>Waveform MSE is generally not a great measure of perceptual similarity. It's particularly sensitive to phase: two signals can sound almost identical but have a large MSE if their waveforms are slightly misaligned.</p>
+
+        <p>For example, consider two sine waves with the same frequency and amplitude, but a 90-degree phase difference:</p>
 
         <figure class="phase-example" id="phase-mse-example" aria-labelledby="phase-caption">
           <img src="../../assets/phase-mse.svg" width="740" height="260" loading="lazy" alt="Two sine waves of amplitude 0.5 at 1 kHz, with a 90-degree phase difference corresponding to six samples at 24 kHz.">
@@ -547,15 +549,17 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
           <figcaption id="phase-caption">Same pitch and level, different phase: at 1 kHz, six samples at 24 kHz correspond to a 90° offset. The waveform MSE is about <strong>0.25</strong>, although the tones should sound the same when played separately.</figcaption>
         </figure>
 
-        <p>However, our setting is a little different. Both the target and reconstructed audio come from the <strong>same deterministic synthesizer</strong>, with identical MIDI inputs, note timing, oscillator starting phase and noise realization. This removes many sources of mismatch, and we know that a parameter configuration capable of producing the exact target waveform exists.</p>
+        <p>At 1 kHz and 24 kHz sample rate, this corresponds to a shift of just six samples. The waveform MSE is about 0.25, even though the two tones should sound identical when played separately.</p>
 
-        <p>That doesn't make the optimization problem trivial. Changes in parameters such as oscillator detuning can still produce large phase differences, and the loss can contain multiple local minima. But MSE provides a simple and inexpensive starting point to test whether gradients through the synthesizer are useful.</p>
+        <p>Our case is a little different, though. Both sounds come from the same deterministic synthesizer, with identical MIDI inputs, oscillator starting phases, and noise realization. We therefore know that a parameter configuration producing exactly the same waveform exists.</p>
+
+        <p>This doesn't make optimization easy, but it makes MSE a reasonable starting point for testing whether the gradients are useful.</p>
 
         <h3>Recovering the parameters</h3>
 
-        <p>I first optimized each parameter individually, keeping the others fixed at their ground-truth values. I then repeated the experiment with multiple parameters optimized simultaneously, making the task progressively more difficult.</p>
+        <p>The results were encouraging: for the tested preset, every parameter could be recovered in at least one run. However, convergence depended on the parameter and its initialization.</p>
 
-        <p>The results were encouraging: <strong>for the tested preset, every parameter was recovered in at least one run</strong>. That is a useful sanity check, rather than a guarantee across all possible sounds. The figure below shows three examples from the single-parameter tests.</p>
+        <p>The following plots show three representative examples, each tested with different random seeds.</p>
 
         <figure class="recovery-figure" id="parameter-recovery" aria-labelledby="recovery-caption">
           <div class="recovery-legend" aria-label="Curve legend">
@@ -586,17 +590,25 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
           <figcaption id="recovery-caption">All three seed groups are plotted, including the failures. Some curves overlap: the two failed LFO-rate runs settle at the same loss. Each curve shows the lowest MSE among four random restarts at each step; recovered values come from the best saved iterate.</figcaption>
         </figure>
 
-        <p><strong>Detuning and LFO rate were the main difficulties in the single-parameter tests.</strong> Detuning was recovered in two of the three seed groups, and LFO rate in one. All the other parameters were recovered in all three seed groups. These two can get stuck even when every other parameter is correct. A separate scan of the LFO-rate loss confirmed a local minimum near 1.708 Hz, away from the correct 2 Hz. Optimizing multiple parameters together adds further ambiguity, since changes in one parameter can be compensated by changes in another.</p>
+        <p>Gain was relatively easy to recover, with all three seed groups converging to the correct value of 0.5.</p>
 
-        <p>I also explored soft waveform selection and hard selection with a straight-through estimator. Soft selection lets the optimizer blend waveforms rather than immediately committing to one choice. I found soft selection much easier to fit, although the saved preset is evaluated with discrete oscillator choices.</p>
+        <p>Detuning was harder. Two seed groups recovered the target of 12 cents, while the third got stuck around 15.6 cents.</p>
+
+        <p>The LFO rate was even more challenging: only one seed group recovered the correct 2 Hz, while the other two converged to approximately 1.708 Hz.</p>
+
+        <p>In fact, detuning and LFO rate were the only parameters that failed in the single-parameter tests; all the others were recovered across all three seed groups. A separate scan of the LFO-rate loss confirmed a local minimum around 1.708 Hz, explaining why optimization repeatedly got stuck there.</p>
+
+        <p>Things become even more complicated when optimizing several parameters together, since changing one parameter can sometimes compensate for changes in another.</p>
+
+        <p>I also compared soft waveform selection with the straight-through estimator introduced earlier. Soft selection was considerably easier to optimize, although the final saved presets still use discrete oscillator choices.</p>
 
         <h3>What did we learn?</h3>
 
-        <p>These experiments gave me confidence that the differentiable synthesizer was working as intended, but also highlighted an important limitation: <strong>a useful gradient doesn't guarantee that gradient descent will find the right parameters</strong>.</p>
+        <p>These experiments confirmed that gradients through the synthesizer are useful, but also showed that <strong>differentiability doesn't guarantee successful optimization</strong>. Even when the target sound can be reproduced exactly, gradient descent can get stuck in local minima.</p>
 
-        <p>Parameter recovery and audio reconstruction are also different goals. Multiple presets can produce similar waveforms, so a low audio loss doesn't guarantee recovery of the original values. Both matter when interpreting these experiments.</p>
+        <p>There's also an important distinction between recovering the original parameters and reproducing the original sound. Different parameter combinations can produce similar audio, so the two objectives aren't necessarily equivalent.</p>
 
-        <p>Rather than repeat this optimization for every sound, I next trained a network to predict presets from audio.</p>
+        <p>Rather than optimizing a new preset from scratch for every recording, the next step was to train a neural network to predict the parameters directly from audio.</p>
       </section>
 
       <section id="data-and-training-strategies" class="article-section learning-section" aria-labelledby="learning-from-synthetic-audio">
