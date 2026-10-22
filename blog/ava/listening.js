@@ -194,8 +194,6 @@ function loadPreset(item) {
   for (const name of controlNames) updateKnob(name, item.physical[name]);
   keyboardBase = Math.max(12, Math.min(84, 12 * Math.floor(item.preset.preview_midi / 12) - 12));
   buildKeyboard(); sendPreset(true);
-  byId('demo-download').href = new URL(item.preset_file, assets);
-  byId('demo-download').download = item.preset_file;
 }
 
 async function preview() {
@@ -229,8 +227,7 @@ function showFamily(family) {
       loadPreset(item); byId('browser-synth').scrollIntoView({behavior: 'smooth', block: 'start'});
       try { await preview(); } catch (error) { showError(error); }
     });
-    const download = text('a', '↓ Preset'); download.href = new URL(item.preset_file, assets); download.download = item.preset_file;
-    footer.append(tryButton, download); card.append(footer); cards.append(card);
+    footer.append(tryButton); card.append(footer); cards.append(card);
   }
 }
 

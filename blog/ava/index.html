@@ -11,8 +11,8 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
   <script defer src="deep-dive.js"></script>
   <script defer src="pretraining-plots.js"></script>
-  <link rel="stylesheet" href="listening.css?v=1">
-  <script type="module" src="listening.js?v=1"></script>
+  <link rel="stylesheet" href="listening.css?v=2">
+  <script type="module" src="listening.js?v=2"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -875,13 +875,13 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
         <p id="gallery-loading" role="status">Loading the sounds…</p>
         <div id="sound-gallery" class="sound-gallery" aria-label="Sound examples"></div>
         <noscript><p>Enable JavaScript to browse the gallery and play the synth. The audio comparisons in the previous section work without it.</p></noscript>
-        <p class="gallery-note">These are held-out test examples, chosen for variety rather than ranked by reconstruction quality. References were decoded from their saved latents; the clips haven't been loudness-matched. Each preset is also downloadable for the plugin.</p>
+        <p class="gallery-note">These are held-out test examples, chosen for variety rather than ranked by reconstruction quality. References were decoded from their saved latents; the clips haven't been loudness-matched.</p>
 
         <h3>Where things go off track</h3>
 
-        <p>Some of the references don't sound much like their descriptions. That goes wrong before Ava even gets involved: better prompts and more reliable text-conditioned generation would already improve the whole pipeline.</p>
+        <p>Some of the references already miss the intended sound. To my ears, the generated guitars and pianos often sound surprisingly similar. The bamboo flute example also slipped through the pitch check, so that check needs improvement too. Better prompts and more reliable generation would help us start with more convincing, distinct sounds.</p>
 
-        <p>When the reference is convincing but Ava misses it, there are two other obstacles: the synth can't make every sound, and training doesn't always find the best preset it could make. These examples help us hear where each part of the pipeline needs work.</p>
+        <p>Ava also seems to reproduce some kinds of sounds more faithfully than others, regardless of the instrument label. Plucky sounds, complex distortion and changing dynamics seem harder to capture in these examples. Some of this comes from the synth's limits, and some from the difficulty of training it to find a good fit.</p>
 
         <h3>Play and tweak the presets</h3>
 
@@ -936,8 +936,10 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
           </div>
           <div class="demo-keyboard" id="demo-keyboard" role="group" aria-label="Playable piano keyboard"></div>
           <p id="demo-status" role="status" aria-live="polite">Loading the presets…</p>
-          <div class="demo-footer"><span><span id="demo-register"></span> · 8 voices · output limiter</span><a id="demo-download" download>↓ Download preset</a></div>
+          <div class="demo-footer"><span><span id="demo-register"></span> · 8 voices · output limiter</span></div>
         </div>
+
+        <p>Overall, I'm quite happy with the bass, piano, flute and trumpet examples. The other families still need some work, although even the less faithful reconstructions can be interesting sounds in their own right. It's not always the preset I had in mind, but it's already a fun tool to play with.</p>
       </section>
       <section class="article-section references-section" aria-labelledby="references">
         <h2 id="references">References</h2>
