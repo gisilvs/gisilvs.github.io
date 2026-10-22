@@ -17,9 +17,9 @@
     <symbol id="decoder" viewBox="0 0 48 30">
       <path d="M7 10L41 2V28L7 20Z" />
     </symbol>
-    <symbol id="wave" viewBox="0 0 48 30">
-      <path d="M1 15H5L8 10 11 22 14 3 17 27 20 7 23 20 26 10 29 18 32 12 35 17 38 13 41 15H47" />
-    </symbol>
+    <symbol id="wave" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 14V18M9 10V22M15 4V28M21 8V24M27 12V20M33 3V29M39 7V25M45 11V21M51 6V26M57 13V19M63 15V17"/>
+  </symbol>
     <symbol id="generator-network" viewBox="0 0 48 30">
       <g stroke-width="0.8" opacity="0.7">
         <path d="M6 8L18 5" />
@@ -76,7 +76,7 @@
     <use href="#decoder" x="485.0" y="74" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
     <text x="509.0" y="125" text-anchor="middle" font-size="12" font-weight="500">SAME decoder</text>
     <rect x="592" y="60" width="130" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd" />
-    <use href="#wave" x="633.0" y="74" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+    <use href="#wave" color="#347358" x="633.0" y="74" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
     <text x="657.0" y="125" text-anchor="middle" font-size="12" font-weight="500">Decoded audio</text>
     <text x="657.0" y="141" text-anchor="middle" font-size="10" fill="#637067">Mono · 24 kHz</text>
     <path d="M140 105H156" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)" />

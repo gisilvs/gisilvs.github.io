@@ -35,7 +35,7 @@
   <symbol id="encoder" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M13 3 51 11V21L13 29Z"/>
   </symbol>
-  <symbol id="tensor" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M10 3H4V29H10M54 3H60V29H54"/><path d="M17 5H47V27H17ZM27 5V27M37 5V27M17 12H47M17 20H47"/>
-  </symbol>
+  <symbol id="tensor" viewBox="0 0 48 30" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 9H33V27H7Z M12 5H38V23 M17 1H43V19 M16 9V27 M24 9V27 M7 18H33" />
+    </symbol>
 </svg>
