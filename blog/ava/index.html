@@ -941,6 +941,26 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>Overall, I'm quite happy with the bass, piano, flute and trumpet examples. The other families still need some work, although even the less faithful reconstructions can be interesting sounds in their own right. It's not always the preset I had in mind, but it's already a fun tool to play with.</p>
       </section>
+      <section class="article-section" aria-labelledby="deployment-to-cpp">
+        <h2 id="deployment-to-cpp">11. Deployment to C++: From Model to Plugin</h2>
+
+        <p>I'd already started a C++ version back in 2024, but it needed updating to match the synth we'd trained. I kept the audio engine independent of <strong>JUCE</strong>, which handles the plugin interface and MIDI integration.</p>
+
+        <p>Instead of rendering whole batches of clips, the C++ engine produces a continuous stream of audio, preserving oscillator phases, envelopes and filter history between buffers. I checked the port by comparing six-second notes against the PyTorch version, alongside tests for note timing and continuity across buffers. This is also the engine behind the browser demo above.</p>
+
+        <p>The neural networks are exported to <strong>ONNX</strong> and run locally on the CPU using <strong>ONNX Runtime</strong>. The text encoder and latent generator use the INT8 exports discussed earlier; the small mapper turns the resulting latent into a preset. There's no external service, Python runtime, audio decoder or pitch estimator involved.</p>
+
+        <p>Generation runs in a separate helper process, with the mapper on a background thread, keeping model loading and inference off the audio thread. Once the preset arrives, it behaves like any other synth patch: MIDI determines the notes, and every control can still be adjusted by hand.</p>
+
+        <figure class="pretraining-errors" aria-labelledby="desktop-plugin-caption">
+          <img src="../../assets/ava-interface.png" width="1080" height="880" loading="lazy" alt="Ava's desktop interface with a preset loaded, text generation controls, two oscillators, filter and LFO, envelope controls and a piano keyboard.">
+          <figcaption id="desktop-plugin-caption">The desktop plugin, with a generated preset loaded.</figcaption>
+        </figure>
+
+        <p>The current build targets <strong>Apple Silicon Macs</strong>, with Audio Unit, VST3 and standalone versions.</p>
+
+        <p><em>TODO: add the GitHub repository and plugin download/installation links.</em></p>
+      </section>
       <section class="article-section references-section" aria-labelledby="references">
         <h2 id="references">References</h2>
         <ol>
