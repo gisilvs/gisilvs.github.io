@@ -749,7 +749,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
         <p>Using the same INT8 networks and eight-step sampler for data generation and deployment also keeps the mapper's inputs consistent. It learns to interpret latents produced by the version we'll actually ship, including any small changes introduced by quantization.</p>
 
         <figure class="pretraining-errors" id="text-generation-pipeline" aria-labelledby="text-generation-pipeline-caption">
-          <img src="../../assets/text-data-generation.svg" width="740" height="310" loading="lazy" alt="Text passes through an eight-step INT8 latent generator and SAME decoder. CREPE checks the audio pitch; accepted raw latents, decoded audio and note settings are saved together.">
+          <img src="../../assets/text-data-generation.svg?v=network-icon" width="740" height="310" loading="lazy" alt="Text passes through an eight-step INT8 latent generator and SAME decoder. CREPE checks the audio pitch; accepted raw latents, decoded audio and note settings are saved together.">
           <figcaption id="text-generation-pipeline-caption">Each accepted latent is paired with its decoded audio and the note settings needed to render the synth.</figcaption>
         </figure>
 

@@ -20,13 +20,41 @@
     <symbol id="wave" viewBox="0 0 48 30">
       <path d="M1 15H5L8 10 11 22 14 3 17 27 20 7 23 20 26 10 29 18 32 12 35 17 38 13 41 15H47" />
     </symbol>
-    <symbol id="diffusion" viewBox="0 0 48 30">
-      <path d="M13 6C25 0 42 5 42 15S26 30 13 24 M13 24V18 M13 24H19" />
-      <g fill="#347358" stroke="none">
-        <circle cx="21" cy="10" r="1.3" />
-        <circle cx="28" cy="12" r="1.3" />
-        <circle cx="19" cy="17" r="1.3" />
-        <circle cx="28" cy="20" r="1.3" />
+    <symbol id="generator-network" viewBox="0 0 48 30">
+      <g stroke-width="0.8" opacity="0.7">
+        <path d="M6 8L18 5" />
+        <path d="M6 8L18 15" />
+        <path d="M6 8L18 25" />
+        <path d="M6 22L18 5" />
+        <path d="M6 22L18 15" />
+        <path d="M6 22L18 25" />
+        <path d="M18 5L30 5" />
+        <path d="M18 5L30 15" />
+        <path d="M18 5L30 25" />
+        <path d="M18 15L30 5" />
+        <path d="M18 15L30 15" />
+        <path d="M18 15L30 25" />
+        <path d="M18 25L30 5" />
+        <path d="M18 25L30 15" />
+        <path d="M18 25L30 25" />
+        <path d="M30 5L42 8" />
+        <path d="M30 5L42 22" />
+        <path d="M30 15L42 8" />
+        <path d="M30 15L42 22" />
+        <path d="M30 25L42 8" />
+        <path d="M30 25L42 22" />
+      </g>
+      <g fill="#f7f7f2" stroke-width="1.2">
+        <circle cx="6" cy="8" r="2.2" />
+        <circle cx="6" cy="22" r="2.2" />
+        <circle cx="18" cy="5" r="2.2" />
+        <circle cx="18" cy="15" r="2.2" />
+        <circle cx="18" cy="25" r="2.2" />
+        <circle cx="30" cy="5" r="2.2" />
+        <circle cx="30" cy="15" r="2.2" />
+        <circle cx="30" cy="25" r="2.2" />
+        <circle cx="42" cy="8" r="2.2" />
+        <circle cx="42" cy="22" r="2.2" />
       </g>
     </symbol>
   </defs>
@@ -37,7 +65,7 @@
     <text x="77.0" y="125" text-anchor="middle" font-size="12" font-weight="500">Text prompt</text>
     <text x="77.0" y="141" text-anchor="middle" font-size="10" fill="#637067">One requested note</text>
     <rect x="162" y="60" width="126" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd" />
-    <use href="#diffusion" x="201.0" y="74" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+    <use href="#generator-network" x="201.0" y="74" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
     <text x="225.0" y="125" text-anchor="middle" font-size="12" font-weight="500">Latent generator</text>
     <text x="225.0" y="141" text-anchor="middle" font-size="10" fill="#637067">INT8 · 8 steps</text>
     <rect x="314" y="60" width="112" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd" />
