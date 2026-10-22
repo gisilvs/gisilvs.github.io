@@ -103,11 +103,10 @@
 
       <section class="article-section" aria-labelledby="the-synth">
         <h2 id="the-synth">2. The Synth</h2>
-        <p>Let's start with the synthesizer itself. For this project, I wanted something relatively simple, but still expressive enough to generate a good variety of sounds. So I went with a <strong>subtractive synthesizer</strong>.</p>
 
-        <p>For those unfamiliar with sound synthesis, a subtractive synthesizer starts by generating one or more waveforms, typically rich in harmonics, and then shapes the resulting sound using filters, envelopes, and other modulations. It's one of the most common approaches to sound synthesis, and a good starting point for this project.</p>
+        <p>For this project, I wanted something relatively simple, but still expressive enough to generate a good variety of sounds. So I went with a <strong>subtractive synthesizer</strong>: a synthesizer that starts with one or more waveforms and shapes the resulting sound using filters, envelopes, and modulation.</p>
 
-        <p>Ava follows a fairly standard architecture, illustrated in the diagram below.</p>
+        <p>Ava follows a fairly standard architecture, illustrated in the interactive diagram below. You can click on each component to see what it does.</p>
 
         <figure class="synth-diagram" aria-labelledby="signal-caption">
           <figcaption id="signal-caption">
@@ -177,23 +176,13 @@
           <div class="flow-output"><svg width="36" height="22" class="signal-sketch" aria-hidden="true" focusable="false"><use href="../../assets/synth-sketches.svg#audio"></use></svg><span>Audio output</span></div>
         </figure>
 
-        <p>The synth has two oscillators, each supporting four waveforms: sine, triangle, square, and sawtooth. Their outputs are combined using a mixing parameter, and the second oscillator can be detuned relative to the first to create richer sounds. White noise can also be blended into the mixed signal before it passes through a resonant low-pass filter, whose cutoff frequency can be modulated by a low-frequency oscillator (LFO). The signal then passes through drive, followed by an ADSR amplitude envelope and output gain.</p>
+        <p>The synth combines two oscillators, optionally mixed with white noise, and passes the signal through a resonant low-pass filter, drive, an ADSR envelope, and output gain. An LFO can also modulate the filter cutoff. The neural network predicts the controls for these components, including waveform selection, detuning, filter settings, and envelope parameters.</p>
 
-        <p>This gives us a relatively small set of parameters to predict:</p>
-        <ul>
-          <li><strong>Oscillators:</strong> waveform selection for each oscillator, mix, and detuning.</li>
-          <li><strong>Noise:</strong> white-noise mix.</li>
-          <li><strong>Filter:</strong> cutoff frequency and resonance.</li>
-          <li><strong>LFO:</strong> modulation rate and depth.</li>
-          <li><strong>Envelope:</strong> attack, decay, sustain, and release.</li>
-          <li><strong>Output:</strong> drive and gain.</li>
-        </ul>
+        <p>One important design decision was to <strong>exclude pitch and velocity from the predicted parameters</strong>. These are normally provided through MIDI, independently of the synth preset. Besides, estimating pitch from audio is already a challenging problem on its own, and I didn't want the model to have to solve both tasks simultaneously.</p>
 
-        <p>One important design decision was to <strong>exclude pitch and velocity from the predicted parameters</strong>. Unlike the other parameters, which define a synth preset, pitch and velocity are generally determined by the incoming MIDI notes. Besides, estimating pitch from audio is already a challenging problem on its own, and I didn't want the model to have to solve both problems simultaneously.</p>
+        <p>Instead, the network predicts only the preset parameters, while the synth receives pitch, velocity, and note timing separately. This simplifies the learning problem, although it also means we need the corresponding MIDI information for each training sample. We'll see later how I handled that.</p>
 
-        <p>Instead, the synthesizer receives pitch, velocity, and note-on/note-off events as separate MIDI inputs, while the neural network only predicts the preset parameters. This simplifies the learning problem, although it also means that we need to know the MIDI information associated with each training sample. We'll see later how I dealt with that.</p>
-
-        <p>The resulting synth is intentionally quite limited compared to commercial synthesizers. There are no effects like reverb or chorus, no complex modulation matrix, and only two oscillators. But that's also part of the experiment: <strong>how much can we do with a relatively simple synthesis engine, and how well can a neural network learn to control it?</strong></p>
+        <p>I intentionally kept the synthesis engine fairly limited. The goal wasn't to build a competitor to commercial synthesizers, but to see how much we could achieve with a simple synth controlled by a neural network.</p>
 
         <div class="deep-dive-section">
         <details class="deep-dive" id="deep-dive">
