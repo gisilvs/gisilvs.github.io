@@ -817,11 +817,11 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
           <tbody><tr><th scope="row">Fine-tuned</th><td><span class="math">10^{-3}</span></td><td>83</td><td>1.912</td></tr><tr><th scope="row">From scratch</th><td><span class="math">10^{-3}</span></td><td>197</td><td><strong>1.888</strong></td></tr><tr><th scope="row">Fine-tuned</th><td><span class="math">10^{-4}</span></td><td>156</td><td>1.901</td></tr><tr><th scope="row">From scratch</th><td><span class="math">10^{-4}</span></td><td>198</td><td>1.918</td></tr></tbody>
         </table>
 
-        <p>The best scratch model reached <strong>1.888</strong>, compared with <strong>1.901</strong> for the best fine-tuned model: about <strong>0.6% lower</strong>. Pretraining helped at the lower learning rate, but not at the higher one. The difference is small, and these four runs use only one seed per configuration, so I wouldn't take this as a general argument against pretraining. It does seem less useful here than when reconstructing our synthetic data.</p>
+        <p>The best scratch model reached <strong>1.888</strong>, compared with <strong>1.901</strong> for the best fine-tuned model: about <strong>0.6% lower</strong>. Pretraining helped at the lower learning rate, but provided no benefit at the higher one. The differences were relatively small, and since we only ran one seed per configuration, it's difficult to draw strong conclusions. Still, pretraining seems to offer less of an advantage here than it did when reconstructing our synthetic data.</p>
 
         <h3>Listening to the results</h3>
 
-        <p>Spectral loss is useful for comparing runs, but the real question is how the presets sound. Here are four test examples, using each strategy's best validation model: fine-tuning at <span class="math">10^{-4}</span> and training from scratch at <span class="math">10^{-3}</span>. Both render discrete oscillator choices, and the clips keep their original levels.</p>
+        <p>Spectral loss is useful for comparing runs, but the real question is how the presets sound. Here are four test examples, using each strategy's best validation model: fine-tuning at <span class="math">10^{-4}</span> and training from scratch at <span class="math">10^{-3}</span>. Both render discrete oscillator choices, and the clips keep their original levels. The piano reference was decoded again from its saved test latent.</p>
 
         <div class="pretraining-examples" id="text-audio-previews">
           <div class="pretraining-example">
@@ -834,12 +834,12 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
             </div>
           </div>
           <div class="pretraining-example">
-            <h4>Piano · E3</h4>
-            <p>“a rounded vintage electric piano with a gentle buzz, hollow and woody.”</p>
+            <h4>Piano · D♯5</h4>
+            <p>“a warm lo-fi piano with a soft muted touch, gently swelling.”</p>
             <div class="reconstruction-audio">
-              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-004-target.wav" aria-label="Piano: generated audio">Your browser does not support audio playback.</audio></div>
-              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-004-pretrained.wav" aria-label="Piano: fine-tuned">Your browser does not support audio playback.</audio></div>
-              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-004-scratch.wav" aria-label="Piano: from scratch">Your browser does not support audio playback.</audio></div>
+              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-033-target.wav" aria-label="Piano: generated audio">Your browser does not support audio playback.</audio></div>
+              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-033-pretrained.wav" aria-label="Piano: fine-tuned">Your browser does not support audio playback.</audio></div>
+              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-033-scratch.wav" aria-label="Piano: from scratch">Your browser does not support audio playback.</audio></div>
             </div>
           </div>
           <div class="pretraining-example">
@@ -852,12 +852,12 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
             </div>
           </div>
           <div class="pretraining-example">
-            <h4>Bass · F2</h4>
-            <p>“a short muted funk bass pluck, gently wavering.”</p>
+            <h4>Flute · G♯4</h4>
+            <p>“a clear bright concert flute with a smooth flowing tone, gently wavering.”</p>
             <div class="reconstruction-audio">
-              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-008-target.wav" aria-label="Bass: generated audio">Your browser does not support audio playback.</audio></div>
-              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-008-pretrained.wav" aria-label="Bass: fine-tuned">Your browser does not support audio playback.</audio></div>
-              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-008-scratch.wav" aria-label="Bass: from scratch">Your browser does not support audio playback.</audio></div>
+              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-001-target.wav" aria-label="Flute: generated audio">Your browser does not support audio playback.</audio></div>
+              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-001-pretrained.wav" aria-label="Flute: fine-tuned">Your browser does not support audio playback.</audio></div>
+              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-001-scratch.wav" aria-label="Flute: from scratch">Your browser does not support audio playback.</audio></div>
             </div>
           </div>
         </div>
