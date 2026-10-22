@@ -6,7 +6,7 @@
   <meta name="description" content="Building Ava, a differentiable synthesizer that turns natural language descriptions into playable presets.">
   <title>Ava: Text-to-Synth — Gianluigi Silvestri</title>
   <link rel="canonical" href="https://gisilvs.github.io/blog/ava/">
-  <link rel="stylesheet" href="../../style.css?v=adsr-and-references">
+  <link rel="stylesheet" href="../../style.css?v=phase-example">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
   <script defer src="deep-dive.js"></script>
@@ -425,7 +425,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>Now that we have a differentiable synthesizer, the first question is whether we can actually recover its parameters through gradient descent. Just because an operation is differentiable doesn't necessarily mean it's easy to optimize.</p>
 
-        <p>To test this, I started with a simple experiment. First, I chose a synthesizer preset and used it to generate target audio. Then, I randomly initialized the parameter I wanted to recover and optimized it to reproduce the target, keeping all other parameters fixed.</p>
+        <p>To test this, I started with a simple experiment. First, I chose a synthesizer preset and used it to generate target audio. Then, I randomly initialized the parameter I wanted to recover and optimized it by gradient descent to reproduce the target, keeping all other parameters fixed.</p>
 
         <p>The objective was simply to minimize the mean squared error (MSE) between the target and reconstructed waveforms:</p>
 
@@ -436,6 +436,21 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
         <h3>Why use MSE for audio?</h3>
 
         <p>Waveform MSE is generally a poor measure of perceptual similarity. It's extremely sensitive to phase and temporal alignment: two signals that sound almost identical can have a large MSE if one is shifted by just a few samples. This is particularly problematic for audio generation, where we often care more about how a sound is perceived than exact waveform correspondence.</p>
+
+        <figure class="phase-example" id="phase-mse-example" aria-labelledby="phase-caption">
+          <img src="../../assets/phase-mse.svg" width="740" height="260" loading="lazy" alt="Two sine waves of amplitude 0.5 at 1 kHz, with a 90-degree phase difference corresponding to six samples at 24 kHz.">
+          <div class="phase-audio">
+            <div>
+              <p>Sine · 0°</p>
+              <audio controls preload="metadata" src="../../assets/phase-sine-original.wav" aria-label="Listen to the original sine wave">Your browser does not support audio playback.</audio>
+            </div>
+            <div>
+              <p>Sine · 90°</p>
+              <audio controls preload="metadata" src="../../assets/phase-sine-shifted.wav" aria-label="Listen to the phase-shifted sine wave">Your browser does not support audio playback.</audio>
+            </div>
+          </div>
+          <figcaption id="phase-caption">Same pitch and level, different phase: at 1 kHz, six samples at 24 kHz correspond to a 90° offset. The waveform MSE is about <strong>0.25</strong>, although the tones should sound the same when played separately. Both clips have matching short fades to avoid clicks.</figcaption>
+        </figure>
 
         <p>However, our setting is a little different. Both the target and reconstructed audio come from the <strong>same deterministic synthesizer</strong>, with identical MIDI inputs, note timing, oscillator starting phase and noise realization. This removes many sources of mismatch, and we know that a parameter configuration capable of producing the exact target waveform exists.</p>
 
@@ -473,16 +488,12 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
               <p class="recovery-values">Recovered (Hz):<br><span class="recovery-seed-a">2</span> / <span class="recovery-seed-b">1.708</span> / <span class="recovery-seed-c">1.708</span></p>
             </div>
           </div>
-          <figcaption id="recovery-caption">Actual waveform-MSE histories, with one parameter optimized at a time. Each curve shows the lowest loss among four random restarts at each step. Recovered values come from the best saved iterate; some curves overlap.</figcaption>
-          <details class="recovery-method">
-            <summary>Experiment settings and plotted data</summary>
-            <p>One six-second C4 note at 24 kHz, held for four seconds; all other preset values fixed. Each seed uses four restarts and 500 Adam steps at a learning rate of 0.08. These diagnostic runs use sample-wise LFO coefficient updates, rather than the synth's default 200 Hz. The vertical axis is logarithmic; losses below <span class="math">10^{-12}</span> share the bottom display level. Values are rounded for readability. <a href="../../assets/parameter-recovery.csv">Download the original loss measurements</a>.</p>
-          </details>
+          <figcaption id="recovery-caption">All three seed groups are plotted, including the failures. Some curves overlap: the two failed LFO-rate runs settle at the same loss. Each curve shows the lowest MSE among four random restarts at each step; recovered values come from the best saved iterate. Losses below <span class="math">10^{-12}</span> are drawn at the bottom.</figcaption>
         </figure>
 
-        <p>Gain converges reliably here, while detuning and LFO rate sometimes get stuck even when every other parameter is correct. A separate scan of the LFO-rate loss confirmed a local minimum near 1.708 Hz, away from the correct 2 Hz. Optimizing multiple parameters together adds further ambiguity, since changes in one parameter can be compensated by changes in another.</p>
+        <p><strong>Detuning and LFO rate were the main difficulties in the single-parameter tests.</strong> Detuning was recovered in two of the three seed groups, and LFO rate in one. All the other parameters were recovered in all three seed groups. These two can get stuck even when every other parameter is correct. A separate scan of the LFO-rate loss confirmed a local minimum near 1.708 Hz, away from the correct 2 Hz. Optimizing multiple parameters together adds further ambiguity, since changes in one parameter can be compensated by changes in another.</p>
 
-        <p>I also explored soft waveform selection and hard selection with a straight-through estimator. Soft selection lets the optimizer blend waveforms rather than immediately committing to one choice. It became my preferred approach in the later network experiments, which I'll return to below. For these fitting tests, the saved preset is also evaluated with discrete oscillator choices: a good soft mixture doesn't necessarily remain a good match after taking the argmax.</p>
+        <p>I also explored soft waveform selection and hard selection with a straight-through estimator. Soft selection lets the optimizer blend waveforms rather than immediately committing to one choice. I found soft selection much easier to fit. For these fitting tests, the saved preset is also evaluated with discrete oscillator choices: a good soft mixture doesn't necessarily remain a good match after taking the argmax.</p>
 
         <h3>What did we learn?</h3>
 
