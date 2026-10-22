@@ -742,7 +742,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>So far, we've only reconstructed sounds produced by our own synthesizer. To move to <strong>text-to-synth</strong>, we need sounds paired with natural-language descriptions, including timbres that Ava might only be able to approximate.</p>
 
-        <p>I used <strong>Stable Audio 3 Small SFX</strong><sup><a href="#ref-stable-audio-3" aria-label="Reference 4: Stable Audio 3">[4]</a></sup>, which operates in the SAME-S latent space. I run its <strong>latent diffusion generator for eight steps</strong>, starting from random noise and refining it according to the prompt. The resulting latent can go directly to our parameter mapper, while the pretrained audio decoder produces the reconstruction target.</p>
+        <p>I used <strong><a href="https://huggingface.co/stabilityai/stable-audio-3-small-sfx">Stable Audio 3 Small SFX</a></strong><sup><a href="#ref-stable-audio-3" aria-label="Reference 4: Stable Audio 3">[4]</a></sup>, a transformer-based latent diffusion model operating in the SAME-S latent space. I run its generator for <strong>eight sampling steps</strong>, starting from random noise and refining it according to the prompt. The resulting latent can be passed directly to our parameter mapper and to the pretrained audio decoder, which produces the reconstruction target used as ground truth.</p>
 
         <p>Since the generator will eventually run locally in the plugin, I <strong>quantize it before generating the dataset</strong>. The text encoder and latent generator store their linear-layer weights as 8-bit integers instead of 32-bit floating-point values; other operations remain in floating point. This reduces model size and memory use, making CPU generation more practical.</p>
 
@@ -778,7 +778,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>When a sound fails this check, I try again with a fresh random seed. After 20 unsuccessful attempts, I replace the prompt so generation can continue without shrinking the dataset.</p>
 
-        <p>I kept note timing simple: the note starts at the beginning of the six-second clip and is released at four seconds. This is an assumption; note-on and note-off aren't estimated from the generated recording.</p>
+        <p>I kept note timing simple: the note starts at the beginning of the six-second clip and is released at four seconds. This is an assumption; note-on and note-off aren't estimated from the generated recording. A natural next step would be to specify note duration in the prompts and extend the checks to account for onset and release, so the synth can follow each sound more closely.</p>
 
         <h3>Training on the generated pairs</h3>
 
