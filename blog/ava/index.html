@@ -978,6 +978,19 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>Ava is still far from replacing the endless scrolling through presets that originally motivated the project. But it feels like a promising starting point, and there's something quite satisfying about describing a sound in words and seeing a synthesizer try to bring it to life.</p>
       </section>
+      <section class="article-section" aria-labelledby="a-note-on-using-llms">
+        <h2 id="a-note-on-using-llms">13. A Note on Using LLMs</h2>
+
+        <p>I started this project in 2024, when coding assistants weren't nearly as capable as they are today. Back then, I implemented the C++ synthesizer myself, following <a href="https://www.theaudioprogrammer.com/books-and-courses/synth-plugin-book">The Audio Programmer's book</a>, with a few modifications and a rather ugly interface. I also added a way to load an audio sample into the plugin and use a trained PyTorch network to predict its synth parameters, and wrote most of the differentiable synth and training pipeline. I stopped before finishing the low-pass filter and LFO, and the project sat unfinished for almost two years.</p>
+
+        <p>When I picked it up again in 2026, things had changed quite a bit. This time, I relied heavily on Codex to finish and refactor the differentiable synth, set up experiments and ablations, analyse the results, and help me iterate much faster than I could have on my own.</p>
+
+        <p>Once I was happy with the Python implementation, I went through it file by file with Codex, reviewing and simplifying the code before moving on. I was less rigorous on the C++ side, where I delegated much of the interface, integration and installation work. I still tested the plugin myself, going through several iterations to find and fix bugs.</p>
+
+        <p>I also used ChatGPT to help write this post. I started with a rough draft, focusing on what I wanted to say rather than polished English, then worked through it section by section to improve the writing and structure while keeping my technical account and personal perspective. I delegated the creation of the diagrams and visualizations too.</p>
+
+        <p>Using these tools was an interesting experiment in itself. They made it much easier to return to an old project, try different ideas and finally finish it. I still had to understand the code, listen to the sounds and decide what the results meant, but the help made the whole process faster and more enjoyable.</p>
+      </section>
       <section class="article-section references-section" aria-labelledby="references">
         <h2 id="references">References</h2>
         <ol>
