@@ -31,7 +31,7 @@
       </header>
 
       <section class="article-section" aria-labelledby="preamble">
-        <h2 id="preamble">Preamble</h2>
+        <h2 id="preamble">1. Preamble</h2>
         <p>A few years ago, I got into music production as a hobby. I spent quite some time learning about sound design, although I never became particularly good at it. My usual workflow was something like this: I had a sound in mind, tried to recreate it on my favorite synthesizer, failed, and started scrolling endlessly through presets. I would find plenty of interesting sounds, but rarely the one I was looking for. Eventually, I would get distracted, forget my original idea, and give up.</p>
 
         <p>Around the same time, I became curious about how synthesizers actually worked. I started reading <a href="https://www.theaudioprogrammer.com/books-and-courses/synth-plugin-book">The Audio Programmer's book on building synthesizer plugins</a>, and realized that much of a synthesizer is essentially a sequence of mathematical operations on audio signals, many of which can be made differentiable.</p>
@@ -52,7 +52,7 @@
       </section>
 
       <section class="article-section" aria-labelledby="the-synth">
-        <h2 id="the-synth">The Synth</h2>
+        <h2 id="the-synth">2. The Synth</h2>
         <p>Let's start with the synthesizer itself. For this project, I wanted something relatively simple, but still expressive enough to generate a good variety of sounds. So I went with a <strong>subtractive synthesizer</strong>.</p>
 
         <p>For those unfamiliar with sound synthesis, a subtractive synthesizer starts by generating one or more waveforms, typically rich in harmonics, and then shapes the resulting sound using filters, envelopes, and other modulations. It's one of the most common approaches to sound synthesis, and a good starting point for this project.</p>
@@ -148,7 +148,7 @@
 
       <section class="article-section deep-dive-section" aria-labelledby="deep-dive-title">
         <details class="deep-dive" id="deep-dive">
-          <summary><h2 id="deep-dive-title">Deep Dive: Building a Differentiable Synthesizer in PyTorch<small>Optional · open to read</small></h2></summary>
+          <summary><h2 id="deep-dive-title">3. Deep Dive: Building a Differentiable Synthesizer in PyTorch<small>Optional · open to read</small></h2></summary>
           <div class="deep-dive-body">
 <p>The main idea behind this project is that we want to use a synthesizer as a differentiable decoder. Given a set of parameters <span class="math">\theta</span> and MIDI information <span class="math">m</span>, the synthesizer produces an audio waveform:</p>
 
@@ -422,7 +422,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
       </section>
 
       <section class="article-section recovery-section" aria-labelledby="is-differentiation-through-the-synth-effective">
-        <h2 id="is-differentiation-through-the-synth-effective">Is Differentiation Through the Synth Effective?</h2>
+        <h2 id="is-differentiation-through-the-synth-effective">4. Is Differentiation Through the Synth Effective?</h2>
 
         <p>Now that we have a differentiable synthesizer, the first question is whether we can actually recover its parameters through gradient descent. Just because an operation is differentiable doesn't necessarily mean it's easy to optimize.</p>
 
@@ -508,7 +508,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
       </section>
 
       <section class="article-section learning-section" aria-labelledby="data-and-training-strategies">
-        <h2 id="data-and-training-strategies">Learning Synth Parameters from Audio Latents</h2>
+        <h2 id="data-and-training-strategies">5. Learning Synth Parameters from Audio Latents</h2>
 
         <p>To predict a preset from audio, we first need a useful representation of the sound. I chose a <strong>pretrained audio encoder</strong>: training one myself was beyond the scope and computational budget of this project, and learning from compact latents is much more feasible than working with raw waveforms. Some encoders also share their latent space with text-to-audio generators, which would give us a way to generate presets from text later.</p>
 
@@ -516,9 +516,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <h3>Data</h3>
 
-        <p>For this experiment, we need recordings with known synthesizer settings. When I started the project in 2024, I considered <a href="https://magenta.tensorflow.org/datasets/nsynth">NSynth</a><sup><a href="#ref-nsynth" aria-label="Reference 2: NSynth">[2]</a></sup>, a dataset of individual instrument notes from Google's Magenta team. It includes pitch and velocity, but not the preset parameters we need. Many of its sounds also wouldn't necessarily be reproducible by Ava.</p>
-
-        <p>But then I realized something obvious: <strong>we already have a synthesizer, so why not generate the data ourselves?</strong> Sampling a preset and a MIDI note gives us both the audio and its ground-truth parameters.</p>
+        <p>Since we already have a synthesizer, we can generate our own recordings: sample a preset and a MIDI note, render the sound, and keep the preset as ground truth.</p>
 
         <p>I generated <strong>100,000 training examples, 10,000 validation examples and 10,000 test examples</strong>, each with a new preset. Pitches were sampled uniformly from MIDI 21–78; velocity stayed fixed. Each clip lasts six seconds, with the key held for four seconds and two seconds left for the release tail.</p>
 
@@ -528,17 +526,17 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>A six-second waveform at 24 kHz contains 144,000 samples. Rather than learn from those samples directly, I used a pretrained audio encoder to produce a shorter sequence for our prediction network.</p>
 
-        <p>I tried <a href="https://github.com/facebookresearch/encodec">EnCodec</a><sup><a href="#ref-encodec" aria-label="Reference 3: EnCodec">[3]</a></sup> and <a href="https://github.com/SonyCSLParis/music2latent">Music2Latent</a><sup><a href="#ref-music2latent" aria-label="Reference 4: Music2Latent">[4]</a></sup> along the way, then settled on <a href="https://huggingface.co/stabilityai/SAME-S">SAME-S</a>, the autoencoder used by <a href="https://huggingface.co/stabilityai/stable-audio-3-small-sfx">Stable Audio 3 Small SFX</a><sup><a href="#ref-stable-audio-3" aria-label="Reference 5: Stable Audio 3">[5]</a></sup>. Those early runs weren't a controlled comparison of encoders. The practical attraction was that <strong>Stable Audio 3 can generate text-conditioned audio in the same latent space</strong>, giving us a route from text to our mapper later.</p>
+        <p>I tried <a href="https://github.com/facebookresearch/encodec">EnCodec</a><sup><a href="#ref-encodec" aria-label="Reference 2: EnCodec">[2]</a></sup> and <a href="https://github.com/SonyCSLParis/music2latent">Music2Latent</a><sup><a href="#ref-music2latent" aria-label="Reference 3: Music2Latent">[3]</a></sup> along the way, then settled on <a href="https://huggingface.co/stabilityai/SAME-S">SAME-S</a>, the autoencoder used by <a href="https://huggingface.co/stabilityai/stable-audio-3-small-sfx">Stable Audio 3 Small SFX</a><sup><a href="#ref-stable-audio-3" aria-label="Reference 4: Stable Audio 3">[4]</a></sup>. Those early runs weren't a controlled comparison of encoders. The practical attraction was that <strong>Stable Audio 3 can generate text-conditioned audio in the same latent space</strong>, giving us a route from text to our mapper later.</p>
 
         <p>For these clips, SAME-S produces 66 frames of 256 values. The encoder stays frozen, and we save its latents alongside the audio, preset and MIDI information.</p>
 
         <figure class="data-pipeline" id="synthetic-data-pipeline" aria-labelledby="data-pipeline-caption">
           <div class="data-flow">
-            <div class="data-step"><strong>Preset + MIDI</strong><svg class="signal-sketch pipeline-sketch" width="36" height="22" aria-hidden="true"><use href="../../assets/synth-sketches.svg?v=latent-learning#controls"/></svg><span>Sample controls and pitch</span></div><span class="data-arrow" aria-hidden="true">→</span>
-            <div class="data-step"><strong>PyTorch synth</strong><svg class="signal-sketch pipeline-sketch" width="36" height="22" aria-hidden="true"><use href="../../assets/synth-sketches.svg?v=latent-learning#decoder"/></svg><span>Render the note</span></div><span class="data-arrow" aria-hidden="true">→</span>
-            <div class="data-step"><strong>Audio</strong><svg class="signal-sketch pipeline-sketch" width="36" height="22" aria-hidden="true"><use href="../../assets/synth-sketches.svg?v=latent-learning#audio"/></svg><span>6 seconds · 24 kHz</span></div><span class="data-arrow" aria-hidden="true">→</span>
-            <div class="data-step"><strong>SAME-S</strong><svg class="signal-sketch pipeline-sketch" width="36" height="22" aria-hidden="true"><use href="../../assets/synth-sketches.svg?v=latent-learning#encoder"/></svg><span>Frozen encoder</span></div><span class="data-arrow" aria-hidden="true">→</span>
-            <div class="data-step"><strong>Latents</strong><svg class="signal-sketch pipeline-sketch" width="36" height="22" aria-hidden="true"><use href="../../assets/synth-sketches.svg?v=latent-learning#tensor"/></svg><span>66 frames × 256 values</span></div>
+            <div class="data-step"><strong>Preset + MIDI</strong><svg class="signal-sketch pipeline-sketch" width="36" height="22" aria-hidden="true"><use href="../../assets/synth-sketches.svg?v=pipeline-synth#controls"/></svg><span>Sample controls and pitch</span></div><span class="data-arrow" aria-hidden="true">→</span>
+            <div class="data-step"><strong>PyTorch synth</strong><svg class="signal-sketch pipeline-sketch" width="36" height="22" aria-hidden="true"><use href="../../assets/synth-sketches.svg?v=pipeline-synth#synth"/></svg><span>Render the note</span></div><span class="data-arrow" aria-hidden="true">→</span>
+            <div class="data-step"><strong>Audio</strong><svg class="signal-sketch pipeline-sketch" width="36" height="22" aria-hidden="true"><use href="../../assets/synth-sketches.svg?v=pipeline-synth#audio"/></svg><span>6 seconds · 24 kHz</span></div><span class="data-arrow" aria-hidden="true">→</span>
+            <div class="data-step"><strong>SAME-S</strong><svg class="signal-sketch pipeline-sketch" width="36" height="22" aria-hidden="true"><use href="../../assets/synth-sketches.svg?v=pipeline-synth#encoder"/></svg><span>Frozen encoder</span></div><span class="data-arrow" aria-hidden="true">→</span>
+            <div class="data-step"><strong>Latents</strong><svg class="signal-sketch pipeline-sketch" width="36" height="22" aria-hidden="true"><use href="../../assets/synth-sketches.svg?v=pipeline-synth#tensor"/></svg><span>66 frames × 256 values</span></div>
           </div>
           <p class="data-targets">Original preset → 13 continuous targets + two waveform labels</p>
           <figcaption id="data-pipeline-caption">The latents become the network input; the preset supplies the supervision. MIDI is saved for rendering and target conversion, but isn't an additional network input.</figcaption>
@@ -546,7 +544,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
       </section>
 
       <section class="article-section learning-section" aria-labelledby="parameter-space-pretraining">
-        <h2 id="parameter-space-pretraining">Parameter-Space Pretraining</h2>
+        <h2 id="parameter-space-pretraining">6. Parameter-Space Pretraining</h2>
 
         <p>With these labeled examples, we can start by predicting the original parameters directly. <strong>No audio needs to be rendered for the training updates</strong>, so this stage is much cheaper than learning through the synthesizer.</p>
 
@@ -567,7 +565,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <h3>How well does it recover the parameters?</h3>
 
-        <p>I trained for 200 epochs, using an exponential moving average of the weights for evaluation, and selected the checkpoint with the lowest validation parameter MSE. On the 10,000 test examples, the overall normalized parameter RMSE was <strong>0.0488</strong>. Waveform accuracy was <strong>92.7% for oscillator A, 93.2% for B, and 86.6% for getting both right</strong>.</p>
+        <p>I trained for 200 epochs, using an exponential moving average of the weights for evaluation, and selected the checkpoint with the lowest validation parameter MSE. On the 10,000 test examples, the overall normalized parameter RMSE was <strong>0.0488</strong>. Waveform accuracy was <strong>92.7% for oscillator A, 93.2% for B, and 86.6% for getting both right</strong>. Most waveform misclassifications were between sine and triangle (about 84% of the errors across the two oscillators).</p>
 
         <figure class="pretraining-errors" id="pretraining-learning-curves" aria-labelledby="learning-curves-caption">
           <img src="../../assets/pretraining-learning-curves.svg" width="740" height="320" loading="lazy" alt="Training and validation losses over 200 epochs. Parameter MSE continues to improve; validation cross-entropy reaches its minimum around epoch 99 and rises later. A dotted line marks the selected checkpoint at epoch 196.">
@@ -597,7 +595,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
               <option value="drive">Drive</option>
           </select>
           <img id="pretraining-scatter-plot" src="../../assets/pretraining-scatter-lfo_rate.svg" width="480" height="480" loading="lazy" alt="LFO rate: target versus predicted normalized values for all 10,000 test examples. The dashed diagonal marks exact recovery.">
-          <figcaption id="scatter-caption">Choose a control to see all 10,000 test predictions. Both axes use normalized values; the dashed diagonal marks exact recovery.</figcaption>
+          <figcaption id="scatter-caption">Choose a control to see all 10,000 test predictions. Both axes use normalized values; the dashed diagonal marks exact recovery. Some target ranges are narrower than [0,1] because of the bounds used in data generation.</figcaption>
         </figure>
 
         <p>LFO rate and decay remain the hardest controls, while release, gain, attack and cutoff are recovered more accurately. Detuning's error corresponds to about 1.37 cents. These results show that the encoder and mapper together recover useful information; they don't isolate whether remaining errors come from the representation, network capacity or ambiguity in the sounds. For example, a high filter cutoff can be difficult to infer when there is little high-frequency energy to remove.</p>
@@ -615,7 +613,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
             </div>
             <details class="preset-comparison">
               <summary>Compare preset values</summary>
-              <table><thead><tr><th scope="col">Parameter</th><th scope="col">Original</th><th scope="col">Predicted</th></tr></thead><tbody><tr><th scope="row">Oscillator A</th><td>Sawtooth</td><td>Sawtooth</td></tr><tr><th scope="row">Oscillator B</th><td>Triangle</td><td>Triangle</td></tr><tr><th scope="row">Gain</th><td>0.338</td><td>0.345</td></tr><tr><th scope="row">Mix</th><td>0.592</td><td>0.572</td></tr><tr><th scope="row">Detuning (cents)</th><td>9.47</td><td>7.43</td></tr><tr><th scope="row">Noise mix</th><td>0.017</td><td>0.105</td></tr><tr><th scope="row">Cutoff (octaves)</th><td>1.63</td><td>2.02</td></tr><tr><th scope="row">Resonance (Q)</th><td>1.79</td><td>1.4</td></tr><tr><th scope="row">LFO rate (Hz)</th><td>1</td><td>1.18</td></tr><tr><th scope="row">LFO depth (octaves)</th><td>0.359</td><td>0.344</td></tr><tr><th scope="row">Drive</th><td>2.26</td><td>2.49</td></tr><tr><th scope="row">Attack (s)</th><td>0.192</td><td>0.196</td></tr><tr><th scope="row">Decay (s)</th><td>0.0773</td><td>0.0864</td></tr><tr><th scope="row">Sustain</th><td>0.833</td><td>0.822</td></tr><tr><th scope="row">Release (s)</th><td>0.623</td><td>0.642</td></tr></tbody></table>
+              <table><thead><tr><th scope="col">Parameter</th><th scope="col">Original</th><th scope="col">Predicted</th></tr></thead><tbody><tr><th scope="row">Oscillator A</th><td>Triangle</td><td>Triangle</td></tr><tr><th scope="row">Oscillator B</th><td>Square</td><td>Square</td></tr><tr><th scope="row">Gain</th><td>0.338</td><td>0.345</td></tr><tr><th scope="row">Mix</th><td>0.592</td><td>0.572</td></tr><tr><th scope="row">Detuning (cents)</th><td>9.47</td><td>7.43</td></tr><tr><th scope="row">Noise mix</th><td>0.017</td><td>0.105</td></tr><tr><th scope="row">Cutoff (octaves)</th><td>1.63</td><td>2.02</td></tr><tr><th scope="row">Resonance (Q)</th><td>1.79</td><td>1.4</td></tr><tr><th scope="row">LFO rate (Hz)</th><td>1</td><td>1.18</td></tr><tr><th scope="row">LFO depth (octaves)</th><td>0.359</td><td>0.344</td></tr><tr><th scope="row">Drive</th><td>2.26</td><td>2.49</td></tr><tr><th scope="row">Attack (s)</th><td>0.192</td><td>0.196</td></tr><tr><th scope="row">Decay (s)</th><td>0.0773</td><td>0.0864</td></tr><tr><th scope="row">Sustain</th><td>0.833</td><td>0.822</td></tr><tr><th scope="row">Release (s)</th><td>0.623</td><td>0.642</td></tr></tbody></table>
             </details>
           </div>
           <div class="pretraining-example">
@@ -626,7 +624,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
             </div>
             <details class="preset-comparison">
               <summary>Compare preset values</summary>
-              <table><thead><tr><th scope="col">Parameter</th><th scope="col">Original</th><th scope="col">Predicted</th></tr></thead><tbody><tr><th scope="row">Oscillator A</th><td>Sine</td><td>Sine</td></tr><tr><th scope="row">Oscillator B</th><td>Square</td><td>Square</td></tr><tr><th scope="row">Gain</th><td>0.351</td><td>0.334</td></tr><tr><th scope="row">Mix</th><td>0.674</td><td>0.688</td></tr><tr><th scope="row">Detuning (cents)</th><td>19.3</td><td>18.9</td></tr><tr><th scope="row">Noise mix</th><td>0.12</td><td>0.133</td></tr><tr><th scope="row">Cutoff (octaves)</th><td>1.82</td><td>1.8</td></tr><tr><th scope="row">Resonance (Q)</th><td>1.52</td><td>1.36</td></tr><tr><th scope="row">LFO rate (Hz)</th><td>2.37</td><td>2.66</td></tr><tr><th scope="row">LFO depth (octaves)</th><td>0.632</td><td>0.632</td></tr><tr><th scope="row">Drive</th><td>2.35</td><td>2.96</td></tr><tr><th scope="row">Attack (s)</th><td>0.0226</td><td>0.0233</td></tr><tr><th scope="row">Decay (s)</th><td>0.161</td><td>0.303</td></tr><tr><th scope="row">Sustain</th><td>0.73</td><td>0.745</td></tr><tr><th scope="row">Release (s)</th><td>0.211</td><td>0.242</td></tr></tbody></table>
+              <table><thead><tr><th scope="col">Parameter</th><th scope="col">Original</th><th scope="col">Predicted</th></tr></thead><tbody><tr><th scope="row">Oscillator A</th><td>Sine</td><td>Sine</td></tr><tr><th scope="row">Oscillator B</th><td>Sawtooth</td><td>Sawtooth</td></tr><tr><th scope="row">Gain</th><td>0.351</td><td>0.334</td></tr><tr><th scope="row">Mix</th><td>0.674</td><td>0.688</td></tr><tr><th scope="row">Detuning (cents)</th><td>19.3</td><td>18.9</td></tr><tr><th scope="row">Noise mix</th><td>0.12</td><td>0.133</td></tr><tr><th scope="row">Cutoff (octaves)</th><td>1.82</td><td>1.8</td></tr><tr><th scope="row">Resonance (Q)</th><td>1.52</td><td>1.36</td></tr><tr><th scope="row">LFO rate (Hz)</th><td>2.37</td><td>2.66</td></tr><tr><th scope="row">LFO depth (octaves)</th><td>0.632</td><td>0.632</td></tr><tr><th scope="row">Drive</th><td>2.35</td><td>2.96</td></tr><tr><th scope="row">Attack (s)</th><td>0.0226</td><td>0.0233</td></tr><tr><th scope="row">Decay (s)</th><td>0.161</td><td>0.303</td></tr><tr><th scope="row">Sustain</th><td>0.73</td><td>0.745</td></tr><tr><th scope="row">Release (s)</th><td>0.211</td><td>0.242</td></tr></tbody></table>
             </details>
           </div>
           <div class="pretraining-example">
@@ -637,7 +635,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
             </div>
             <details class="preset-comparison">
               <summary>Compare preset values</summary>
-              <table><thead><tr><th scope="col">Parameter</th><th scope="col">Original</th><th scope="col">Predicted</th></tr></thead><tbody><tr><th scope="row">Oscillator A</th><td>Sawtooth</td><td>Sawtooth</td></tr><tr><th scope="row">Oscillator B</th><td>Sawtooth</td><td>Sawtooth</td></tr><tr><th scope="row">Gain</th><td>0.286</td><td>0.238</td></tr><tr><th scope="row">Mix</th><td>0.748</td><td>0.729</td></tr><tr><th scope="row">Detuning (cents)</th><td>16.1</td><td>16.9</td></tr><tr><th scope="row">Noise mix</th><td>0.0343</td><td>0.0239</td></tr><tr><th scope="row">Cutoff (octaves)</th><td>2.06</td><td>2.06</td></tr><tr><th scope="row">Resonance (Q)</th><td>0.712</td><td>0.72</td></tr><tr><th scope="row">LFO rate (Hz)</th><td>1.23</td><td>1.2</td></tr><tr><th scope="row">LFO depth (octaves)</th><td>0.665</td><td>0.573</td></tr><tr><th scope="row">Drive</th><td>0.455</td><td>0.931</td></tr><tr><th scope="row">Attack (s)</th><td>0.0891</td><td>0.0782</td></tr><tr><th scope="row">Decay (s)</th><td>0.439</td><td>0.509</td></tr><tr><th scope="row">Sustain</th><td>0.667</td><td>0.744</td></tr><tr><th scope="row">Release (s)</th><td>0.143</td><td>0.128</td></tr></tbody></table>
+              <table><thead><tr><th scope="col">Parameter</th><th scope="col">Original</th><th scope="col">Predicted</th></tr></thead><tbody><tr><th scope="row">Oscillator A</th><td>Triangle</td><td>Triangle</td></tr><tr><th scope="row">Oscillator B</th><td>Triangle</td><td>Triangle</td></tr><tr><th scope="row">Gain</th><td>0.286</td><td>0.238</td></tr><tr><th scope="row">Mix</th><td>0.748</td><td>0.729</td></tr><tr><th scope="row">Detuning (cents)</th><td>16.1</td><td>16.9</td></tr><tr><th scope="row">Noise mix</th><td>0.0343</td><td>0.0239</td></tr><tr><th scope="row">Cutoff (octaves)</th><td>2.06</td><td>2.06</td></tr><tr><th scope="row">Resonance (Q)</th><td>0.712</td><td>0.72</td></tr><tr><th scope="row">LFO rate (Hz)</th><td>1.23</td><td>1.2</td></tr><tr><th scope="row">LFO depth (octaves)</th><td>0.665</td><td>0.573</td></tr><tr><th scope="row">Drive</th><td>0.455</td><td>0.931</td></tr><tr><th scope="row">Attack (s)</th><td>0.0891</td><td>0.0782</td></tr><tr><th scope="row">Decay (s)</th><td>0.439</td><td>0.509</td></tr><tr><th scope="row">Sustain</th><td>0.667</td><td>0.744</td></tr><tr><th scope="row">Release (s)</th><td>0.143</td><td>0.128</td></tr></tbody></table>
             </details>
           </div>
           <div class="pretraining-example">
@@ -648,7 +646,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
             </div>
             <details class="preset-comparison">
               <summary>Compare preset values</summary>
-              <table><thead><tr><th scope="col">Parameter</th><th scope="col">Original</th><th scope="col">Predicted</th></tr></thead><tbody><tr><th scope="row">Oscillator A</th><td>Sine</td><td>Sine</td></tr><tr><th scope="row">Oscillator B</th><td>Square</td><td>Square</td></tr><tr><th scope="row">Gain</th><td>0.721</td><td>0.743</td></tr><tr><th scope="row">Mix</th><td>0.342</td><td>0.372</td></tr><tr><th scope="row">Detuning (cents)</th><td>24.1</td><td>23.1</td></tr><tr><th scope="row">Noise mix</th><td>0.159</td><td>0.122</td></tr><tr><th scope="row">Cutoff (octaves)</th><td>2.23</td><td>2.12</td></tr><tr><th scope="row">Resonance (Q)</th><td>0.63</td><td>0.69</td></tr><tr><th scope="row">LFO rate (Hz)</th><td>3.13</td><td>4.68</td></tr><tr><th scope="row">LFO depth (octaves)</th><td>0.119</td><td>0.237</td></tr><tr><th scope="row">Drive</th><td>3.98</td><td>3.24</td></tr><tr><th scope="row">Attack (s)</th><td>0.112</td><td>0.114</td></tr><tr><th scope="row">Decay (s)</th><td>0.741</td><td>0.872</td></tr><tr><th scope="row">Sustain</th><td>0.425</td><td>0.426</td></tr><tr><th scope="row">Release (s)</th><td>1.1</td><td>1.22</td></tr></tbody></table>
+              <table><thead><tr><th scope="col">Parameter</th><th scope="col">Original</th><th scope="col">Predicted</th></tr></thead><tbody><tr><th scope="row">Oscillator A</th><td>Sine</td><td>Sine</td></tr><tr><th scope="row">Oscillator B</th><td>Sawtooth</td><td>Sawtooth</td></tr><tr><th scope="row">Gain</th><td>0.721</td><td>0.743</td></tr><tr><th scope="row">Mix</th><td>0.342</td><td>0.372</td></tr><tr><th scope="row">Detuning (cents)</th><td>24.1</td><td>23.1</td></tr><tr><th scope="row">Noise mix</th><td>0.159</td><td>0.122</td></tr><tr><th scope="row">Cutoff (octaves)</th><td>2.23</td><td>2.12</td></tr><tr><th scope="row">Resonance (Q)</th><td>0.63</td><td>0.69</td></tr><tr><th scope="row">LFO rate (Hz)</th><td>3.13</td><td>4.68</td></tr><tr><th scope="row">LFO depth (octaves)</th><td>0.119</td><td>0.237</td></tr><tr><th scope="row">Drive</th><td>3.98</td><td>3.24</td></tr><tr><th scope="row">Attack (s)</th><td>0.112</td><td>0.114</td></tr><tr><th scope="row">Decay (s)</th><td>0.741</td><td>0.872</td></tr><tr><th scope="row">Sustain</th><td>0.425</td><td>0.426</td></tr><tr><th scope="row">Release (s)</th><td>1.1</td><td>1.22</td></tr></tbody></table>
             </details>
           </div>
         </div>
@@ -665,7 +663,6 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
         <h2 id="references">References</h2>
         <ol>
           <li id="ref-clap">Benjamin Elizalde, Soham Deshmukh, Mahmoud Al Ismail and Huaming Wang. <a href="https://arxiv.org/abs/2206.04769">CLAP: Learning Audio Concepts From Natural Language Supervision</a>. arXiv:2206.04769, 2022.</li>
-          <li id="ref-nsynth">Jesse Engel et al. <a href="https://arxiv.org/abs/1704.01279">Neural Audio Synthesis of Musical Notes with WaveNet Autoencoders</a>. 2017.</li>
           <li id="ref-encodec">Alexandre Défossez et al. <a href="https://arxiv.org/abs/2210.13438">High Fidelity Neural Audio Compression</a>. 2022.</li>
           <li id="ref-music2latent">Marco Pasini, Stefan Lattner and George Fazekas. <a href="https://arxiv.org/abs/2408.06500">Music2Latent: Consistency Autoencoders for Latent Audio Compression</a>. 2024.</li>
           <li id="ref-stable-audio-3">Zach Evans et al. <a href="https://arxiv.org/abs/2605.17991">Stable Audio 3</a>. 2026.</li>

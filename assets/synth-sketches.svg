@@ -26,11 +26,14 @@
   <symbol id="controls" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M10 3V29M32 3V29M54 3V29"/><path d="M4 10H16M26 22H38M48 14H60" stroke-width="4"/>
   </symbol>
-  <symbol id="decoder" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 11 51 3V29L13 21Z"/><path d="M2 16H13M51 8H62M51 16H62M51 24H62"/>
+  <symbol id="synth" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="2" width="58" height="28" rx="2"/>
+    <path d="M3 12H61M15 12V30M27 12V30M39 12V30M51 12V30M35 9 39 5V9L43 5V9L47 5"/>
+    <circle cx="10" cy="7" r="1.5"/><circle cx="20" cy="7" r="1.5"/>
+    <path d="M12 12H18V21H12ZM24 12H30V21H24ZM48 12H54V21H48Z" fill="currentColor" stroke="none"/>
   </symbol>
   <symbol id="encoder" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M13 3 51 11V21L13 29Z"/><path d="M2 8H13M2 16H13M2 24H13M51 16H62"/>
+    <path d="M13 3 51 11V21L13 29Z"/>
   </symbol>
   <symbol id="tensor" viewBox="0 0 64 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M10 3H4V29H10M54 3H60V29H54"/><path d="M17 5H47V27H17ZM27 5V27M37 5V27M17 12H47M17 20H47"/>
