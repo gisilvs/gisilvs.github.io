@@ -683,13 +683,19 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>I used <a href="https://github.com/csteinmetz1/auraloss">auraloss</a><sup><a href="#ref-auraloss" aria-label="Reference 5: auraloss">[5]</a></sup> to compare each pair of magnitude spectrograms in two ways: their relative difference, called <em>spectral convergence</em>, and the mean absolute difference between their log magnitudes:</p>
 
-        <div class="math display-math">\mathcal{L}_{\mathrm{STFT}}=\frac{1}{R}\sum_{r=1}^{R}\left(\frac{\lVert M_r-\hat M_r\rVert_F}{\lVert M_r\rVert_F}+\operatorname{mean}\left|\log M_r-\log\hat M_r\right|\right)</div>
+        <div class="math display-math">\mathcal{L}_{\mathrm{STFT}}=\frac{1}{R}\sum_{r=1}^{R}\left(\frac{\lVert A_r-\hat A_r\rVert_F}{\lVert A_r\rVert_F}+\operatorname{mean}\left|\log A_r-\log\hat A_r\right|\right)</div>
 
-        <p>Here, <span class="math">M_r</span> and <span class="math">\hat M_r</span> are the target and reconstructed magnitudes at resolution <span class="math">r</span>. Both terms have weight one. The logarithm gives quieter frequency components more influence; a small magnitude floor keeps it finite.</p>
+        <p>Here, <span class="math">A_r</span> and <span class="math">\hat A_r</span> are the target and reconstructed STFT magnitudes at resolution <span class="math">r</span>. Both terms have weight one. The logarithm gives quieter frequency components more influence; a small magnitude floor keeps it finite.</p>
 
         <h3>Combining STFT and log-mel</h3>
 
-        <p>After testing several losses on a small synthetic subset, I settled on a multi-resolution STFT loss with longer windows, combined with <strong>log-mel L1</strong>. The longer windows help distinguish close frequencies, while log-mel groups frequencies into bands to compare the sound's broader tonal shape. The two losses are added with equal weight:</p>
+        <p>After testing several losses on a small synthetic subset, I settled on a multi-resolution STFT loss with longer windows, combined with <strong>log-mel L1</strong>. The longer windows help distinguish close frequencies, while log-mel groups frequencies into bands to compare the sound's broader tonal shape.</p>
+
+        <p>For the separate log-mel term, a mel filterbank <span class="math">F_k</span> groups STFT magnitudes into frequency bands: <span class="math">B_k=F_k|\mathrm{STFT}_k(x)|</span>. We compute <span class="math">\hat B_k</span> for the reconstructed audio in the same way, then compare their log magnitudes, averaging over <span class="math">K</span> resolutions:</p>
+
+        <div class="math display-math">\mathcal{L}_{\mathrm{logmel}}=\frac{1}{K}\sum_{k=1}^{K}\operatorname{mean}\left|\log B_k-\log\hat B_k\right|</div>
+
+        <p>The final audio loss adds the STFT and log-mel losses with equal weight:</p>
 
         <div class="math display-math">\mathcal{L}_{\mathrm{audio}}=\mathcal{L}_{\mathrm{STFT}}+\mathcal{L}_{\mathrm{logmel}}</div>
 
