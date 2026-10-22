@@ -281,3 +281,5 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
   .recovery-grid { grid-template-columns: 1fr; gap: 30px; }
   .recovery-card { max-width: 360px; width: 100%; margin: 0 auto; }
 }
+
+.references-section ol { margin: 0; padding-left: 24px; font-size: 15px; line-height: 1.8; }
