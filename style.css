@@ -288,3 +288,28 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .phase-audio audio { display: block; width: 100%; }
 .phase-example figcaption { color: var(--muted); font-size: 13px; line-height: 1.7; }
 @media (max-width: 600px) { .phase-audio { grid-template-columns: 1fr; } }
+
+/* Dataset flow and held-out parameter-supervision results. */
+.learning-section h3 { margin: 36px 0 18px; font: normal 25px/1.4 Georgia, serif; }
+.data-pipeline, .pretraining-errors { margin: 30px 0; }
+.data-flow { display: flex; align-items: stretch; gap: 8px; }
+.data-step { flex: 1; min-width: 0; padding: 14px 6px; border: 1px solid var(--line); border-radius: 6px; background: #f0f3ec; text-align: center; font-size: 13px; line-height: 1.6; }
+.data-step strong, .data-step span { display: block; }
+.data-step span { margin-top: 6px; color: var(--muted); font-size: 12px; }
+.data-arrow { align-self: center; color: var(--accent); font-size: 20px; }
+.data-pipeline .data-targets { margin: 14px 0; padding: 12px; background: #f0f3ec; border-left: 3px solid var(--accent); font-size: 14px; }
+.data-pipeline figcaption, .pretraining-errors figcaption { margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.pretraining-errors img { display: block; width: 100%; height: auto; }
+.pretraining-examples { margin: 28px 0; }
+.pretraining-example { border-top: 1px solid var(--line); padding: 20px 0; }
+.pretraining-example h4 { margin: 0; font-size: 17px; font-weight: 600; }
+.preset-comparison { font-size: 13px; color: var(--muted); }
+.preset-comparison summary { cursor: pointer; }
+.preset-comparison table { width: 100%; margin-top: 12px; border-collapse: collapse; color: var(--ink); font-size: 13px; }
+.preset-comparison th, .preset-comparison td { padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: right; }
+.preset-comparison th:first-child { text-align: left; font-weight: 500; }
+@media (max-width: 720px) {
+  .data-flow { flex-direction: column; gap: 6px; }
+  .data-step { padding: 10px; }
+  .data-arrow { transform: rotate(90deg); }
+}
