@@ -737,6 +737,57 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>To my ears, the fine-tuned examples sound a little closer to the originals, despite the drop in parameter accuracy. Recovering the original parameters and reconstructing the sound are different goals. For text-generated audio, we won't have preset labels at all: we'll be looking for a good approximation within Ava's capabilities. That's the next step.</p>
       </section>
+      <section class="article-section" aria-labelledby="text-conditioned-data-generation">
+        <h2 id="text-conditioned-data-generation">8. Text-Conditioned Data Generation</h2>
+
+        <p>So far, we've only reconstructed sounds produced by our own synthesizer. To move to <strong>text-to-synth</strong>, we need sounds paired with natural-language descriptions, including timbres that Ava might only be able to approximate.</p>
+
+        <p>I used <strong>Stable Audio 3 Small SFX</strong><sup><a href="#ref-stable-audio-3" aria-label="Reference 4: Stable Audio 3">[4]</a></sup>, whose text-conditioned generator operates in the SAME-S latent space. Starting from a prompt, it generates a latent that we can feed directly to our parameter mapper. Its pretrained audio decoder provides the waveform we'll use as the reconstruction target.</p>
+
+        <figure class="pretraining-errors" id="text-generation-pipeline" aria-labelledby="text-generation-pipeline-caption">
+          <img src="../../assets/text-generation-and-training.svg" width="740" height="690" loading="lazy" alt="Two-stage pipeline. Generation: text to latent generator, raw SAME latent, decoder and audio. CREPE pitch checks determine which latent/audio pairs are saved. Training: the latent enters the parameter mapper; predicted controls and separate pitch/timing drive the synth. STFT and log-mel losses compare rendered audio with the saved decoded target; gradients update only the mapper.">
+          <figcaption id="text-generation-pipeline-caption">The latent and its decoded audio form a training pair. Pitch and timing enter the synth separately; the mapper receives only the latent.</figcaption>
+        </figure>
+
+        <h3>Generating single-note sounds</h3>
+
+        <p>I sampled eight instrument families: bass, piano, guitar, trumpet, flute, strings, synth lead and pad. For each prompt, I chose a predefined sound description, an optional modifier and a pitch from that instrument's range. There is no LLM rewriting or text classifier.</p>
+
+        <p>Here are four descriptions from the generated test set:</p>
+        <ul>
+          <li><strong>Guitar · D♯4:</strong> “a fuzzy garage guitar with a thick buzzing tone, hollow and woody.”</li>
+          <li><strong>Piano · E3:</strong> “a rounded vintage electric piano with a gentle buzz, hollow and woody.”</li>
+          <li><strong>Trumpet · A♯3:</strong> “a dark mellow muted trumpet, thin and delicate.”</li>
+          <li><strong>Synth Lead · C4:</strong> “a gritty distorted rave lead with a sharp biting sound, warm and fuzzy.”</li>
+        </ul>
+
+        <p>Each description goes into the same wrapper. For example:</p>
+        <blockquote><p>A single isolated guitar-inspired subtractive synthesizer note at D#4 (MIDI 63, 311.13 Hz). Desired timbre: a fuzzy garage guitar with a thick buzzing tone, hollow and woody. Dry and monophonic, triggered once, within a 6-second clip.</p></blockquote>
+
+        <p>The wrapper asks for one dry, monophonic trigger within six seconds, allowing both plucked and sustained sounds. It doesn't prescribe a four-second held note. Full prompts are unique across the training, validation and test splits, although descriptions and modifiers are reused.</p>
+
+        <p>The dataset contains <strong>10,000 training examples, 1,000 validation examples and 1,000 test examples</strong>. Generation uses the same INT8 text encoder, latent generator and eight-step sampling schedule as the plugin, so the mapper learns from latents in the format it will receive at deployment.</p>
+
+        <h3>Pitch and note timing</h3>
+
+        <p>Requesting a note in the prompt doesn't guarantee that the generated sound follows it. I check the decoded audio with <strong>CREPE</strong>, through <a href="https://github.com/maxrmorrison/torchcrepe">torchcrepe</a><sup><a href="#ref-torchcrepe" aria-label="Reference 6: torchcrepe">[6]</a></sup>, which returns a pitch and periodicity estimate every 10 milliseconds. I ignore quiet frames and keep confidently pitched ones, using a periodicity threshold of 0.8.</p>
+
+        <p>A clip needs at least roughly 100 milliseconds of confident pitch, covering at least half of its active frames. At least 90% of those confident frames must be within half a semitone of the requested note. For accepted clips, I use the <strong>median detected frequency in hertz</strong> to render the synth, without rounding it to a MIDI key.</p>
+
+        <p>If a clip fails, I retry the same prompt with a fresh random seed. After 20 failed attempts, I replace the prompt and append a new one to the queue, keeping the intended dataset size.</p>
+
+        <p>Note timing is an assumption, not an estimate: the synth receives note-on at the start of the clip, note-off at four seconds and velocity one, followed by a two-second release window. The generated sound can fade earlier or start later. This is a limitation of the training setup, particularly for plucks and slow attacks.</p>
+
+        <h3>Training on the generated pairs</h3>
+
+        <p>I save the generated latent alongside its decoded mono audio at 24 kHz and the note settings. The <strong>256 × 66 latent goes directly to the mapper</strong>, with no feature normalization or re-encoding. The decoder's latent-scale conversion belongs only to the audio branch; it isn't applied to the mapper's input.</p>
+
+        <p>During training, the predicted preset passes through the differentiable synth, and the rendered audio is compared with the saved decoded waveform using the STFT and log-mel loss. There are no ground-truth preset labels here. Only the mapper is trained; the text-to-audio models stay frozen.</p>
+
+        <p>At deployment, the C++ plugin also passes the raw latent directly to the exported mapper. <strong>Neither the audio decoder nor the pitch tracker is needed</strong>: the keyboard supplies pitch, velocity and note timing. An instrument's default pitch is included in the text prompt, but it doesn't restrict which notes the resulting preset can play.</p>
+
+        <p>We now have everything needed to learn from text-generated sounds. The next question is how closely Ava can approximate them, and whether starting from parameter-supervised weights still helps.</p>
+      </section>
       <section class="article-section references-section" aria-labelledby="references">
         <h2 id="references">References</h2>
         <ol>
@@ -745,6 +796,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
           <li id="ref-music2latent">Marco Pasini, Stefan Lattner and George Fazekas. <a href="https://arxiv.org/abs/2408.06500">Music2Latent: Consistency Autoencoders for Latent Audio Compression</a>. 2024.</li>
           <li id="ref-stable-audio-3">Zach Evans et al. <a href="https://arxiv.org/abs/2605.17991">Stable Audio 3</a>. 2026.</li>
           <li id="ref-auraloss">Christian J. Steinmetz and Joshua D. Reiss. <a href="https://github.com/csteinmetz1/auraloss">auraloss: Audio focused loss functions in PyTorch</a>. DMRN+15, 2020.</li>
+          <li id="ref-torchcrepe">torchcrepe. <a href="https://github.com/maxrmorrison/torchcrepe">PyTorch implementation of the CREPE pitch tracker</a>. GitHub repository.</li>
         </ol>
       </section>
     </article>

@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="690" viewBox="0 0 740 690" role="img" aria-labelledby="title description">
+<title id="title">Generating text-conditioned data and training the parameter mapper</title>
+<desc id="description">Text passes through a frozen latent generator and SAME decoder. CREPE checks decoded audio pitch; accepted latents, audio and note settings are saved together. During training only the saved latent enters the mapper. Its predicted preset and separately supplied pitch and timing enter the differentiable synth. Rendered audio is compared with saved decoded audio using STFT and log-mel losses. Gradients update only the mapper.</desc>
+<defs>
+<marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#637067"/></marker>
+<marker id="gradient" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#a96542"/></marker>
+<symbol id="text" viewBox="0 0 48 30"><path d="M8 3H40V27H8Z M14 10H34 M14 15H31 M14 20H26"/></symbol>
+<symbol id="network" viewBox="0 0 48 30"><path d="M9 6L24 9 39 4 M9 6L24 22 39 16 M9 24L24 9 39 28 M9 24L24 22 39 4"/><g fill="#f7f7f2"><circle cx="9" cy="6" r="3"/><circle cx="9" cy="24" r="3"/><circle cx="24" cy="9" r="3"/><circle cx="24" cy="22" r="3"/><circle cx="39" cy="4" r="3"/><circle cx="39" cy="16" r="3"/><circle cx="39" cy="28" r="3"/></g></symbol>
+<symbol id="tensor" viewBox="0 0 48 30"><path d="M7 9H33V27H7Z M12 5H38V23 M17 1H43V19 M16 9V27 M24 9V27 M7 18H33"/></symbol>
+<symbol id="decoder" viewBox="0 0 48 30"><path d="M7 10L41 2V28L7 20Z"/></symbol>
+<symbol id="wave" viewBox="0 0 48 30"><path d="M1 15H5L8 10 11 22 14 3 17 27 20 7 23 20 26 10 29 18 32 12 35 17 38 13 41 15H47"/></symbol>
+<symbol id="controls" viewBox="0 0 48 30"><path d="M6 7H42 M6 15H42 M6 23H42"/><g fill="#f7f7f2"><circle cx="17" cy="7" r="3"/><circle cx="32" cy="15" r="3"/><circle cx="22" cy="23" r="3"/></g></symbol>
+<symbol id="synth" viewBox="0 0 48 30"><path d="M3 2H45V28H3Z M3 16H45 M12 16V28 M20 16V28 M28 16V28 M36 16V28"/><circle cx="13" cy="9" r="3"/><circle cx="25" cy="9" r="3"/><circle cx="37" cy="9" r="3"/></symbol>
+</defs>
+<g font-family="system-ui, -apple-system, sans-serif" fill="#202e2b">
+<text x="18" y="29" font-size="15" font-weight="600">Generate the dataset</text>
+<rect x="18" y="60" width="118" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<use href="#text" x="53.0" y="74" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="77.0" y="125" text-anchor="middle" font-size="12" font-weight="500">Text prompt</text>
+<text x="77.0" y="141" text-anchor="middle" font-size="10" fill="#637067">One requested note</text>
+<rect x="162" y="60" width="126" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<use href="#network" x="201.0" y="74" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="225.0" y="125" text-anchor="middle" font-size="12" font-weight="500">Latent generator</text>
+<text x="225.0" y="141" text-anchor="middle" font-size="10" fill="#637067">INT8 · 8 steps</text>
+<rect x="314" y="60" width="112" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<use href="#tensor" x="346.0" y="74" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="370.0" y="125" text-anchor="middle" font-size="12" font-weight="500">Generated latent</text>
+<text x="370.0" y="141" text-anchor="middle" font-size="10" fill="#637067">256 × 66</text>
+<rect x="452" y="60" width="114" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<use href="#decoder" x="485.0" y="74" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="509.0" y="125" text-anchor="middle" font-size="12" font-weight="500">SAME decoder</text>
+<text x="509.0" y="141" text-anchor="middle" font-size="10" fill="#637067">Frozen</text>
+<rect x="592" y="60" width="130" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<use href="#wave" x="633.0" y="74" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="657.0" y="125" text-anchor="middle" font-size="12" font-weight="500">Decoded audio</text>
+<text x="657.0" y="141" text-anchor="middle" font-size="10" fill="#637067">Mono · 24 kHz</text>
+<path d="M140 105H156" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M292 105H308" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M430 105H446" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M570 105H586" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M370 150V209" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M657 150V189" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="592" y="195" width="130" height="70" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<text x="657" y="220" text-anchor="middle" font-size="12" font-weight="500">CREPE pitch check</text>
+<text x="657" y="243" text-anchor="middle" font-size="11" fill="#637067">Matches prompt pitch?</text>
+<text x="657" y="286" text-anchor="middle" font-size="11" fill="#a96542">Retry if rejected</text>
+<rect x="220" y="215" width="310" height="80" rx="8" fill="#eef2e9" stroke="#bdc8bd"/>
+<text x="375" y="239" text-anchor="middle" font-size="13" font-weight="600">Save accepted pair</text>
+<text x="375" y="261" text-anchor="middle" font-size="12">Raw latent + decoded audio</text>
+<text x="375" y="281" text-anchor="middle" font-size="12" fill="#637067">Median pitch + fixed note timing</text>
+<path d="M592 230H560V255H536" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="561" y="278" text-anchor="middle" font-size="10" fill="#637067">Accept</text>
+<path d="M18 320H722" stroke="#dce1d6"/>
+<text x="18" y="350" font-size="15" font-weight="600">Train with the saved pairs</text>
+<rect x="430" y="375" width="170" height="38" rx="6" fill="#f7f7f2" stroke="#bdc8bd"/>
+<text x="515" y="399" text-anchor="middle" font-size="12">Pitch + note timing</text>
+<path d="M515 413V439" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="18" y="445" width="118" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<use href="#tensor" x="53.0" y="459" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="77.0" y="510" text-anchor="middle" font-size="12" font-weight="500">Saved latent</text>
+<text x="77.0" y="526" text-anchor="middle" font-size="10" fill="#637067">Unchanged</text>
+<rect x="162" y="445" width="126" height="90" rx="8" fill="#e5efe8" stroke="#347358"/>
+<use href="#network" x="201.0" y="459" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="225.0" y="510" text-anchor="middle" font-size="12" font-weight="500">Parameter mapper</text>
+<text x="225.0" y="526" text-anchor="middle" font-size="10" fill="#637067">Trainable</text>
+<rect x="314" y="445" width="112" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<use href="#controls" x="346.0" y="459" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="370.0" y="510" text-anchor="middle" font-size="12" font-weight="500">Predicted preset</text>
+<text x="370.0" y="526" text-anchor="middle" font-size="10" fill="#637067">Controls + waveforms</text>
+<rect x="452" y="445" width="114" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<use href="#synth" x="485.0" y="459" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="509.0" y="510" text-anchor="middle" font-size="12" font-weight="500">PyTorch synth</text>
+<text x="509.0" y="526" text-anchor="middle" font-size="10" fill="#637067">Differentiable</text>
+<rect x="592" y="445" width="130" height="90" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<use href="#wave" x="633.0" y="459" width="48" height="30" fill="none" stroke="#347358" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="657.0" y="510" text-anchor="middle" font-size="12" font-weight="500">Rendered audio</text>
+<text x="657.0" y="526" text-anchor="middle" font-size="10" fill="#637067">Reconstruction</text>
+<path d="M140 490H156" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M292 490H308" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M430 490H446" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M570 490H586" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="330" y="565" width="174" height="60" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<text x="417" y="590" text-anchor="middle" font-size="12" font-weight="500">Saved decoded audio</text>
+<text x="417" y="610" text-anchor="middle" font-size="11" fill="#637067">Reconstruction target</text>
+<rect x="592" y="565" width="130" height="60" rx="8" fill="#f7f7f2" stroke="#bdc8bd"/>
+<text x="657" y="590" text-anchor="middle" font-size="12" font-weight="500">Audio loss</text>
+<text x="657" y="610" text-anchor="middle" font-size="11" fill="#637067">STFT + log-mel</text>
+<path d="M657 535V559" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M510 595H586" fill="none" stroke="#637067" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M592 615H562V650H225V541" fill="none" stroke="#a96542" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#gradient)"/>
+<text x="390" y="677" text-anchor="middle" font-size="12" fill="#a96542">Backpropagate through the synth; update only the mapper</text>
+</g></svg>
