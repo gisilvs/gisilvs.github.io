@@ -37,15 +37,15 @@
 
       <section class="article-section" aria-label="Introduction">
         <p>What if, instead of endlessly scrolling through synthesizer presets, you could simply describe the sound you wanted?</p>
-        <p>In this post, I'll walk through <strong>Ava</strong>, a text-to-synth synthesizer that turns natural language descriptions into editable presets. I built a differentiable synthesizer in PyTorch and trained a small neural network to predict its parameters from audio, using backpropagation through the synth itself. To make it work with text, I used a pretrained text-to-audio model to generate training data, and eventually brought everything together in a C++ plugin that runs locally.</p>
-        <p>The results are far from perfect, but the sounds can be quite convincing! Along the way, I'll share how I built it, the experiments I ran, what worked (and what didn't), and a few interactive demos you can play with yourself.</p>
+        <p><strong>Ava</strong> is my attempt to make that possible: a subtractive synthesizer that turns text descriptions into editable presets. Under the hood, I built a differentiable synthesizer in PyTorch and trained a small neural network to predict its parameters from audio. I then used a pretrained text-to-audio model to generate training data, and brought everything together in a C++ plugin.</p>
+        <p>In this post, I'll walk through how I built it, the experiments that worked (and those that didn't), and some interactive demos you can play with yourself.</p>
       </section>
 
       <section class="article-section quick-listen" aria-labelledby="quick-listen">
         <h2 id="quick-listen">A Quick Listen</h2>
 
-        <p>Before getting into the details, here's what Ava actually sounds like. Each example compares audio generated from a text description with Ava's attempt to recreate it using an editable synthesizer preset.</p>
-        <p>These are just a couple of examples from the test set. You can explore more sounds and play with the presets yourself in the full interactive demo below.</p>
+        <p>Before getting into the technical details, here's a taste of what Ava can do. For each text description, you can compare the generated reference audio with Ava's attempt to reproduce it using a synthesizer preset.</p>
+        <p>You'll find more examples and a playable synth further down the page.</p>
         <div class="quick-examples">
           <div class="sound-card" data-example-id="033">
             <div class="sound-card-heading"><h3>Lo-fi piano</h3><span class="note-badge">D♯5</span></div>
