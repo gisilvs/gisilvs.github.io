@@ -90,7 +90,7 @@
 
         <p>That got me thinking: <strong>what if I implemented a synthesizer in PyTorch, and used backpropagation to learn its parameters?</strong></p>
 
-        <p>The original idea was <strong>sound-to-synth</strong>: given an audio sample, a neural network would predict the synthesizer parameters needed to reproduce it. By rendering audio through a differentiable synth and comparing it with the original, we could train the network end-to-end, using the synthesizer itself as the decoder.</p>
+        <p>The original idea was <strong>sound-to-synth</strong>: given an audio sample, a neural network would predict the synthesizer parameters needed to reproduce it. By rendering audio through a differentiable synth and comparing it with the original, I could train the network end-to-end, using the synthesizer itself as the decoder.</p>
 
         <p>But then I realized this wasn't quite the problem I wanted to solve. How often do you have a recording of the exact sound you're imagining? Most of the time, you can at least try to describe it: <em>a warm, slightly detuned pad with a slow attack</em>, or <em>a bright, punchy pluck</em>. And even if the result isn't perfect, having a reasonably close preset to start tweaking would already make sound design much easier.</p>
 
@@ -180,9 +180,9 @@
 
         <p>One important design decision was to <strong>exclude pitch and velocity from the predicted parameters</strong>. These are normally provided through MIDI, independently of the synth preset. Besides, estimating pitch from audio is already a challenging problem on its own, and I didn't want the model to have to solve both tasks simultaneously.</p>
 
-        <p>Instead, the network predicts only the preset parameters, while the synth receives pitch, velocity, and note timing separately. This simplifies the learning problem, although it also means we need the corresponding MIDI information for each training sample. We'll see later how I handled that.</p>
+        <p>Instead, the network predicts only the preset parameters, while the synth receives pitch, velocity, and note timing separately. This simplifies the learning problem, but requires the corresponding MIDI information for each training sample. I'll explain later how I handled that.</p>
 
-        <p>I intentionally kept the synthesis engine fairly limited. The goal wasn't to build a competitor to commercial synthesizers, but to see how much we could achieve with a simple synth controlled by a neural network.</p>
+        <p>I intentionally kept the synthesis engine fairly limited. The goal wasn't to build a competitor to commercial synthesizers, but to see how much a simple synth controlled by a neural network could achieve.</p>
 
         <div class="deep-dive-section">
         <details class="deep-dive" id="deep-dive">
@@ -192,9 +192,9 @@
 
 <div class="math display-math">\hat{x}=S(\theta,m)</div>
 
-<p>Here, <span class="math">\theta</span> and <span class="math">m</span> are inputs to the synth; the synthesizer itself has no trainable weights. It's a collection of signal-processing operations, but by implementing them in PyTorch, we can propagate gradients through the entire signal chain.</p>
+<p>Here, <span class="math">\theta</span> and <span class="math">m</span> are inputs to the synth; the synthesizer itself has no trainable weights. It's a collection of signal-processing operations. Implementing them in PyTorch allows gradients to propagate through the entire signal chain.</p>
 
-<p>We can use these gradients to optimize the parameters of a single sound directly, or train a neural network to predict them from audio. Most synth operations are straightforward to differentiate, but some, particularly waveform selection and recursive filtering, require a bit more care.</p>
+<p>These gradients can be used to optimize the parameters of a single sound directly, or train a neural network to predict them from audio. Most synth operations are straightforward to differentiate, but some, particularly waveform selection and recursive filtering, require a bit more care.</p>
 
 <h3 id="oscillators-and-waveform-selection">Oscillators and waveform selection</h3>
 
@@ -206,7 +206,7 @@
 
 <p>where <span class="math">f</span> is the frequency in hertz and <span class="math">t</span> is time in seconds.</p>
 
-<p>To generate digital audio, we evaluate this function at discrete time steps. At a sample rate of 24 kHz, we take 24,000 samples per second, so consecutive samples are separated by <span class="math">1/24000</span> seconds.</p>
+<p>For digital audio, this function is evaluated at discrete time steps. A sample rate of 24 kHz means 24,000 samples per second, so consecutive samples are separated by <span class="math">1/24000</span> seconds.</p>
 
 <p>For a recording containing <span class="math">N</span> samples, the time vector is:</p>
 
@@ -219,7 +219,7 @@
 time <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">arange</span><span class="code-operator">(</span><span class="code-function">round</span><span class="code-operator">(</span>duration <span class="code-operator">*</span> <span class="code-namespace">self</span><span class="code-operator">.</span>sample_rate<span class="code-operator">)</span><span class="code-operator">,</span>
                     device<span class="code-operator">=</span>freq<span class="code-operator">.</span>device<span class="code-operator">,</span> dtype<span class="code-operator">=</span><span class="code-namespace">torch</span><span class="code-operator">.</span>float32<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-namespace">self</span><span class="code-operator">.</span>sample_rate</code></pre>
 
-<p>We can then generate the sine wave by evaluating the equation at every time step:</p>
+<p>Evaluating the equation at every time step produces the sine wave:</p>
 
 <p class="code-source">From <code>synth/oscillators/sine.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">__call__</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> freq<span class="code-operator">,</span> time<span class="code-operator">)</span><span class="code-operator">:</span>
@@ -230,7 +230,7 @@ time <span class="code-operator">=</span> <span class="code-namespace">torch</sp
 
 <p>Multiplying time by frequency gives the number of completed cycles, while multiplying by <span class="math">2\pi</span> converts that into radians. At 200 Hz and 24 kHz, each cycle takes 120 samples.</p>
 
-<p>PyTorch broadcasting also lets us generate several waveforms at different frequencies in parallel, using the same time vector.</p>
+<p>PyTorch broadcasting also makes it possible to generate several waveforms at different frequencies in parallel, using the same time vector.</p>
 
 <h4>Building more complex waveforms</h4>
 
@@ -250,11 +250,11 @@ time <span class="code-operator">=</span> <span class="code-namespace">torch</sp
 
 <figure class="waveform-figure" id="building-a-square" aria-labelledby="square-build-caption"><div class="waveform-grid"><figure class="waveform-card"><figcaption>Start with the fundamental, f</figcaption><img src="../../assets/building-square-1.svg" alt="Square-wave approximation using odd harmonics through 1" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Add the third harmonic, 3f</figcaption><img src="../../assets/building-square-3.svg" alt="Square-wave approximation using odd harmonics through 3" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Add the fifth and seventh</figcaption><img src="../../assets/building-square-7.svg" alt="Square-wave approximation using odd harmonics through 7" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Continue through the 31st</figcaption><img src="../../assets/building-square-31.svg" alt="Square-wave approximation using odd harmonics through 31" width="300" height="130" loading="lazy"></figure></div><figcaption id="square-build-caption">Solid green shows the running sum; dashed brown shows the new components in the middle two panels. All panels use the same amplitude scale and the synth's 4/π normalization. Two cycles at 200 Hz, sampled at 24 kHz.</figcaption></figure>
 
-<p>In Ava, the square and triangle oscillators use odd harmonics up to the 31st, while the sawtooth uses all harmonics up to the 31st. We also exclude harmonics at or above the Nyquist frequency (half the sample rate) to reduce aliasing.</p>
+<p>In Ava, the square and triangle oscillators use odd harmonics up to the 31st, while the sawtooth uses all harmonics up to the 31st. The implementation also excludes harmonics at or above the Nyquist frequency (half the sample rate) to reduce aliasing.</p>
 
 <p>These are finite approximations, which explains the small ripples visible in the square wave.</p>
 
-<p>In PyTorch, we can calculate all the harmonics at once using broadcasting. For a batch of <span class="math">B</span> sounds, <span class="math">N</span> audio samples, and <span class="math">H</span> harmonics, we construct a tensor of shape <code>[B, H, N]</code>, then sum along the harmonic dimension.</p>
+<p>The harmonics can all be calculated at once using PyTorch broadcasting. For a batch of <span class="math">B</span> sounds, <span class="math">N</span> audio samples, and <span class="math">H</span> harmonics, the calculation produces a tensor of shape <code>[B, H, N]</code>, which is then summed along the harmonic dimension.</p>
 
 <p class="code-source">From <code>synth/oscillators/square.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Odd harmonic numbers: 1, 3, ..., 31. Initially [H].</span>
@@ -275,11 +275,11 @@ waves <span class="code-operator">=</span> <span class="code-namespace">torch</s
 
 <h4>Making waveform selection differentiable</h4>
 
-<p>Now we can generate four waveforms, but how do we let a neural network choose between them?</p>
+<p>With all four waveforms available, how can a neural network choose between them?</p>
 
 <p>Waveform selection is discrete: each oscillator must select one of four possibilities. A hard selection using <code>argmax</code> would prevent gradients from flowing back through the choice.</p>
 
-<p>Instead, we can use a softmax-weighted combination of the four waveforms:</p>
+<p>A softmax-weighted combination of the four waveforms provides a differentiable alternative:</p>
 
 <div class="math display-math">x(t)=\sum_{k=1}^{4}p_kx_k(t),
 \qquad p_k=\operatorname{softmax}(z)_k</div>
@@ -330,7 +330,7 @@ wave <span class="code-operator">=</span> <span class="code-operator">(</span><s
 
 <h3 id="adsr-envelope">ADSR envelope</h3>
 
-<p>So far, our oscillators generate continuous periodic signals. To turn these into musical notes, we need to control how their amplitude changes over time.</p>
+<p>So far, the oscillators generate continuous periodic signals. Turning these into musical notes requires control over how their amplitude changes over time.</p>
 
 <p>This is the job of the <strong>ADSR envelope</strong>: attack raises the amplitude, decay lowers it toward the sustain level, and release brings it back to zero after note-off.</p>
 
@@ -339,7 +339,7 @@ wave <span class="code-operator">=</span> <span class="code-operator">(</span><s
   <svg id="envelope-plot" viewBox="0 0 640 210" role="img" aria-labelledby="envelope-plot-title"><title id="envelope-plot-title">ADSR amplitude over a six-second clip</title><g id="envelope-grid"><line x1="34" y1="176" x2="616" y2="176"/><text x="26" y="180" text-anchor="end">0</text><line x1="34" y1="96.0" x2="616" y2="96.0"/><text x="26" y="100.0" text-anchor="end">0.5</text><line x1="34" y1="16" x2="616" y2="16"/><text x="26" y="20" text-anchor="end">1</text><text x="34.0" y="198" text-anchor="middle">0</text><text x="131.0" y="198" text-anchor="middle">1</text><text x="228.0" y="198" text-anchor="middle">2</text><text x="325.0" y="198" text-anchor="middle">3</text><text x="422.0" y="198" text-anchor="middle">4</text><text x="519.0" y="198" text-anchor="middle">5</text><text x="616.0" y="198" text-anchor="middle">6 s</text></g><line id="envelope-note-off" y1="16" y2="176"/><path id="envelope-curve"/></svg>
   <div class="envelope-controls"><label for="envelope-attack"><span>Attack <output for="envelope-attack" id="value-attack">0.30s</output></span><input id="envelope-attack" name="attack" type="range" min="0.02" max="2" step="0.01" value="0.3" data-unit="s"></label><label for="envelope-decay"><span>Decay <output for="envelope-decay" id="value-decay">0.70s</output></span><input id="envelope-decay" name="decay" type="range" min="0.02" max="2" step="0.01" value="0.7" data-unit="s"></label><label for="envelope-sustain"><span>Sustain <output for="envelope-sustain" id="value-sustain">0.55</output></span><input id="envelope-sustain" name="sustain" type="range" min="0" max="1" step="0.01" value="0.55" data-unit=""></label><label for="envelope-release"><span>Release <output for="envelope-release" id="value-release">1.50s</output></span><input id="envelope-release" name="release" type="range" min="0.05" max="2" step="0.01" value="1.5" data-unit="s"></label><label for="envelope-hold"><span>Note-off <output for="envelope-hold" id="value-hold">4.00s</output></span><input id="envelope-hold" name="hold" type="range" min="0.1" max="4" step="0.01" value="4" data-unit="s"></label></div><noscript>Enable JavaScript to adjust the envelope.</noscript></figure>
 
-<p>Ava uses exponential curves for these transitions. We first define a function that maps progress through a stage, from zero to one, into a curved transition:</p>
+<p>Ava uses exponential curves for these transitions. The following function maps progress through a stage, from zero to one, into a curved transition:</p>
 
 <p class="code-source">From <code>synth/envelopes/adsr.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">curve</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> progress<span class="code-operator">)</span><span class="code-operator">:</span>
@@ -352,7 +352,7 @@ wave <span class="code-operator">=</span> <span class="code-operator">(</span><s
 
 <p>The curvature is fixed at 4, giving a relatively fast initial transition that gradually slows toward its endpoint. At halfway through the stage, the curve has already completed about 88% of the transition.</p>
 
-<p>We use this same curve for both attack and decay, changing its duration and amplitude range. During attack, the level rises from zero to one. During decay, it falls from one toward the sustain level.</p>
+<p>The same curve handles both attack and decay, with different durations and amplitude ranges. During attack, the level rises from zero to one. During decay, it falls from one toward the sustain level.</p>
 
 <p class="code-source">From <code>synth/envelopes/adsr.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">held_level</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> time<span class="code-operator">,</span> attack<span class="code-operator">,</span> decay<span class="code-operator">,</span> sustain<span class="code-operator">)</span><span class="code-operator">:</span>
@@ -361,9 +361,9 @@ wave <span class="code-operator">=</span> <span class="code-operator">(</span><s
     decay_level <span class="code-operator">=</span> <span class="code-number">1</span> <span class="code-operator">-</span> <span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> sustain<span class="code-operator">)</span> <span class="code-operator">*</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">curve</span><span class="code-operator">(</span><span class="code-operator">(</span>time <span class="code-operator">-</span> attack<span class="code-operator">)</span> <span class="code-operator">/</span> decay<span class="code-operator">)</span>
     <span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">where</span><span class="code-operator">(</span>time <span class="code-operator">&lt;</span> attack<span class="code-operator">,</span> attack_level<span class="code-operator">,</span> decay_level<span class="code-operator">)</span></code></pre>
 
-<p>Release requires a little more care. A note might end while the attack or decay is still in progress, so we can't assume that release always starts from the sustain level.</p>
+<p>Release requires a little more care. A note might end while the attack or decay is still in progress, so release doesn't always start from the sustain level.</p>
 
-<p>Instead, we evaluate the envelope at the exact note-off time and fade from that value to zero.</p>
+<p>Instead, the envelope is evaluated at the exact note-off time and fades from that value to zero.</p>
 
 <p class="code-source">From <code>synth/envelopes/adsr.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Amplitude while the key is held, evaluated at every audio sample.</span>
@@ -407,7 +407,7 @@ a_0y[n]={}&amp;b_0x[n]+b_1x[n-1]+b_2x[n-2]\\
 
 <p>In Ava, the cutoff follows the MIDI pitch, expressed as an octave offset from the note frequency. This helps preserve a similar filtering effect when playing different notes.</p>
 
-<p>Given a cutoff frequency <span class="math">f_c</span>, sample rate <span class="math">f_s</span>, and resonance <span class="math">Q</span>, we first calculate:</p>
+<p>Given a cutoff frequency <span class="math">f_c</span>, sample rate <span class="math">f_s</span>, and resonance <span class="math">Q</span>, the calculation starts with:</p>
 
 <div class="math display-math">\omega=\frac{2\pi f_c}{f_s},
 \qquad
@@ -423,7 +423,7 @@ a_0&amp;=1+\alpha,
 &amp;a_2&amp;=1-\alpha
 \end{aligned}</div>
 
-<p>We normalize all coefficients by <span class="math">a_0</span>, so the recurrence can be written with <span class="math">a_0=1</span>.</p>
+<p>All coefficients are normalized by <span class="math">a_0</span>, so the recurrence can be written with <span class="math">a_0=1</span>.</p>
 
 <p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Convert cutoff Hz to radians per sample.</span>
@@ -436,7 +436,7 @@ b <span class="code-operator">=</span> <span class="code-namespace">torch</span>
 <span class="code-comment"># Divide every coefficient by a0, so the new a0 is 1.</span>
 <span class="code-keyword">return</span> a <span class="code-operator">/</span> a<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-number">1</span><span class="code-operator">]</span><span class="code-operator">,</span> b <span class="code-operator">/</span> a<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-number">1</span><span class="code-operator">]</span></code></pre>
 
-<p>When the cutoff and resonance remain constant, we only need to calculate these coefficients once. We can then apply the recursive filter using <code>torchaudio.functional.lfilter</code>.</p>
+<p>When the cutoff and resonance remain constant, these coefficients only need to be calculated once. The recursive filter can then be applied using <code>torchaudio.functional.lfilter</code>.</p>
 
 <p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Compute one coefficient set per batch element from the fixed cutoff and Q.</span>
@@ -451,11 +451,11 @@ filtered <span class="code-operator">=</span> <span class="code-function">lfilte
 
 <h4>Adding LFO modulation</h4>
 
-<p>Now suppose we want the cutoff to move over time.</p>
+<p>The cutoff can also move over time.</p>
 
 <p>An LFO (low-frequency oscillator) adds a periodic modulation to the cutoff. Its rate determines how quickly the cutoff changes, while its depth controls how far it moves.</p>
 
-<p>Since our cutoff is expressed in octaves relative to the MIDI pitch, we can write:</p>
+<p>With the cutoff expressed in octaves relative to the MIDI pitch, the formula becomes:</p>
 
 <div class="math display-math">f_c(t)=f_{\mathrm{MIDI}}\,
 2^{o_{\mathrm{cutoff}}+d\sin(2\pi rt)}</div>
@@ -468,7 +468,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">lfilte
 
 <p>Between updates, the filter continues processing audio at the full sample rate using the current coefficients.</p>
 
-<p>At each update, we calculate the modulated cutoff and convert it into a new set of filter coefficients:</p>
+<p>At each update, the modulated cutoff is calculated and converted into a new set of filter coefficients:</p>
 
 <p class="code-source">Simplified from <code>synth/synth.py</code> and <code>synth/filters/lowpass.py</code>; batching omitted</p>
 <pre><code class="language-python"><span class="code-comment"># For one update time; the full implementation batches all update times.</span>
@@ -506,7 +506,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
 <p>The ADSR envelope then shapes the amplitude, while output gain and MIDI velocity control the final level.</p>
 
-<p>With everything connected, our synthesizer is just a differentiable function mapping MIDI information and preset parameters to audio. We can render a sound, compute a loss, and backpropagate through the entire signal chain.</p>
+<p>With everything connected, the synthesizer is just a differentiable function mapping MIDI information and preset parameters to audio. Rendering a sound and computing a loss makes it possible to backpropagate through the entire signal chain.</p>
 
 <p>Of course, <strong>being differentiable doesn't guarantee that the parameters are easy to optimize</strong>. Different parameter combinations can produce similar sounds, and the loss landscape may contain local minima. That's what I wanted to investigate next.</p>
 
@@ -551,7 +551,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>At 1 kHz and 24 kHz sample rate, this corresponds to a shift of just six samples. The waveform MSE is about 0.25, even though the two tones should sound identical when played separately.</p>
 
-        <p>Our case is a little different, though. Both sounds come from the same deterministic synthesizer, with identical MIDI inputs, oscillator starting phases, and noise realization. We therefore know that a parameter configuration producing exactly the same waveform exists.</p>
+        <p>This experiment is a little different, though. Both sounds come from the same deterministic synthesizer, with identical MIDI inputs, oscillator starting phases, and noise realization. A parameter configuration producing exactly the same waveform therefore exists.</p>
 
         <p>This doesn't make optimization easy, but it makes MSE a reasonable starting point for testing whether the gradients are useful.</p>
 
@@ -602,7 +602,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>I also compared soft waveform selection with the straight-through estimator introduced earlier. Soft selection was considerably easier to optimize, although the final saved presets still use discrete oscillator choices.</p>
 
-        <h3>What did we learn?</h3>
+        <h3>What did I learn?</h3>
 
         <p>These experiments confirmed that gradients through the synthesizer are useful, but also showed that <strong>differentiability doesn't guarantee successful optimization</strong>. Even when the target sound can be reproduced exactly, gradient descent can get stuck in local minima.</p>
 
@@ -614,9 +614,9 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
       <section id="data-and-training-strategies" class="article-section learning-section" aria-labelledby="learning-from-synthetic-audio">
         <h2 id="learning-from-synthetic-audio">4. Learning from Synthetic Audio</h2>
 
-        <p>Before trying to reconstruct sounds from a text-to-audio model, I wanted to start with something simpler: <strong>can a neural network recover the parameters of sounds generated by our own synthesizer?</strong></p>
+        <p>Before trying to reconstruct sounds from a text-to-audio model, I wanted to start with something simpler: <strong>can a neural network recover the parameters of sounds generated by Ava?</strong></p>
 
-        <p>Since we control the synthesizer, we can generate as much training data as we need, with the original parameters available as ground truth. This also lets us train the network directly on the parameters, without the computational cost of rendering audio at every training step.</p>
+        <p>Ava can generate as much training data as needed, with the original parameters available as ground truth. This makes it possible to train the network directly on the parameters, without the computational cost of rendering audio at every training step.</p>
 
         <p>More importantly, it's a useful first experiment to see whether the audio representation contains enough information to recover the synth controls.</p>
 
@@ -630,7 +630,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>I initially experimented with <a href="https://github.com/facebookresearch/encodec">EnCodec</a><sup><a href="#ref-encodec" aria-label="Reference 2: EnCodec">[2]</a></sup> and <a href="https://github.com/SonyCSLParis/music2latent">Music2Latent</a><sup><a href="#ref-music2latent" aria-label="Reference 3: Music2Latent">[3]</a></sup>, before settling on <a href="https://huggingface.co/stabilityai/SAME-S">SAME-S</a>, the autoencoder used by <a href="https://huggingface.co/stabilityai/stable-audio-3-small-sfx">Stable Audio 3 Small SFX</a><sup><a href="#ref-stable-audio-3" aria-label="Reference 4: Stable Audio 3">[4]</a></sup>. These weren't controlled comparisons, but SAME-S had one particularly useful advantage: an available text-conditioned model that generates audio in the same latent space.</p>
 
-        <p>For our six-second recordings, SAME-S produces a sequence of 66 latent vectors, each containing 256 values. I encoded the dataset once using the frozen encoder and saved the latents alongside the original presets.</p>
+        <p>For these six-second recordings, SAME-S produces a sequence of 66 latent vectors, each containing 256 values. I encoded the dataset once using the frozen encoder and saved the latents alongside the original presets.</p>
 
         <figure class="data-pipeline" id="synthetic-data-pipeline" aria-labelledby="data-pipeline-caption">
           <div class="data-flow">
@@ -644,7 +644,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
           <figcaption id="data-pipeline-caption">The latents become the network input; the preset supplies the supervision. MIDI is saved for rendering and target conversion, but isn't an additional network input.</figcaption>
         </figure>
 
-        <p>The audio latents become the input to our prediction network, while the original preset parameters provide the supervision. MIDI information is stored for rendering, but isn't passed to the network.</p>
+        <p>The audio latents become the input to the prediction network, while the original preset parameters provide the supervision. MIDI information is stored for rendering, but isn't passed to the network.</p>
 
         <p>I ran this entire stage, from data generation to supervised training, on my MacBook M1 Pro.</p>
 
@@ -656,7 +656,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>The continuous outputs are bounded between 0 and 1 using sigmoid activations, then mapped to their actual parameter ranges by the synthesizer. For the two oscillators, the network predicts four logits each, corresponding to the available waveforms.</p>
 
-        <p>Training is straightforward: we use MSE for the normalized continuous parameters and cross-entropy for the waveform selections. The two losses are combined as:</p>
+        <p>For training, I used MSE for the normalized continuous parameters and cross-entropy for the waveform selections. The two losses are combined as:</p>
 
         <div class="math display-math">\begin{aligned}
 \mathcal{L}_{\mathrm{param}} &amp;=
@@ -668,7 +668,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>where <span class="math">u_i</span> and <span class="math">\hat{u}_i</span> are the ground-truth and predicted normalized parameters. All continuous parameters are weighted equally, while the waveform classification term receives a weight of 0.01. Both loss terms are also averaged over the batch.</p>
 
-        <p>Notice that we don't need to render audio during training: we're simply learning to map audio latents to the parameters that originally generated them.</p>
+        <p>No audio needs to be rendered during training: the network simply learns to map audio latents to the parameters that originally generated them.</p>
 
         <h3>How Well Does It Work?</h3>
 
@@ -692,7 +692,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>LFO rate and decay were the hardest parameters, while release, gain, attack, and cutoff were recovered more accurately. The detuning error, for example, corresponds to around 1.37 cents.</p>
 
-        <p>We can also inspect how predictions compare with their targets across the entire test set.</p>
+        <p>The scatter plots below show how predictions compare with their targets across the entire test set.</p>
 
         <figure class="pretraining-errors pretraining-scatter" id="pretraining-scatter" aria-labelledby="scatter-caption">
           <label for="scatter-parameter">Compare target and prediction:</label>
@@ -774,25 +774,25 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>The reconstructions are generally close, although the parameter tables reveal some noticeable differences. In the fourth example, for instance, both oscillator waveforms are predicted correctly, but the LFO rate is estimated at 4.68 Hz instead of 3.13 Hz.</p>
 
-        <p>Overall, this experiment suggests that the pretrained audio representation contains enough information to recover the synth controls reasonably well. But direct parameter supervision is only possible because we generated the data ourselves.</p>
+        <p>Overall, this experiment suggests that the pretrained audio representation contains enough information to recover the synth controls reasonably well. But direct parameter supervision is only possible because I generated the data myself.</p>
 
-        <p>For sounds produced by an external model, we won't know the original parameters. Instead, we'll need to train the network based on <strong>how closely the synthesizer reproduces the target audio</strong>.</p>
+        <p>Sounds produced by an external model have no known synth parameters. Instead, training needs to be based on <strong>how closely the synthesizer reproduces the target audio</strong>.</p>
       </section>
 
       <section id="audio-reconstruction-loss" class="article-section learning-section" aria-labelledby="training-with-an-audio-loss">
         <h2 id="training-with-an-audio-loss">5. Training with an Audio Loss</h2>
 
-        <p>So far, we've trained the network to recover the original synth parameters. But if we want to reconstruct sounds that weren't generated by Ava, we won't have any ground-truth parameters to supervise the model with.</p>
+        <p>So far, I've trained the network to recover the original synth parameters. But sounds that weren't generated by Ava have no ground-truth parameters to supervise the model with.</p>
 
-        <p>Instead, we need to train it by comparing the audio produced by the predicted preset with the target recording.</p>
+        <p>Instead, training needs to compare the audio produced by the predicted preset with the target recording.</p>
 
-        <p>I first tested this on our synthetic dataset, where we know that an exact reconstruction is possible. This lets us evaluate audio-loss training in a controlled setting before moving to text-generated sounds.</p>
+        <p>I first tested this on the synthetic dataset, where an exact reconstruction is possible. This provided a controlled setting for evaluating audio-loss training before moving to text-generated sounds.</p>
 
         <h3>Moving to a Spectral Loss</h3>
 
-        <p>As we saw earlier, waveform MSE is very sensitive to phase and temporal alignment. For reconstructing arbitrary audio, comparing sounds in the frequency domain is often more useful.</p>
+        <p>As discussed earlier, waveform MSE is very sensitive to phase and temporal alignment. For reconstructing arbitrary audio, comparing sounds in the frequency domain is often more useful.</p>
 
-        <p>The <strong>short-time Fourier transform (STFT)</strong> splits a waveform into overlapping windows and measures its frequency content over time. By comparing the magnitudes of these spectrograms, we become less sensitive to phase differences while retaining information about how the sound evolves.</p>
+        <p>The <strong>short-time Fourier transform (STFT)</strong> splits a waveform into overlapping windows and measures its frequency content over time. Comparing the magnitudes of these spectrograms reduces sensitivity to phase differences while retaining information about how the sound evolves.</p>
 
         <p>The window size introduces a trade-off: short windows capture transients more precisely, while longer windows provide better frequency resolution, which is particularly useful for distinguishing nearby frequencies. A <strong>multi-resolution STFT loss</strong> combines both.</p>
 
@@ -824,7 +824,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <div class="math display-math">B_k=F_k|\mathrm{STFT}_k(x)|</div>
 
-        <p>We then compare the log-mel representations of the target and reconstruction, averaging over <span class="math">K</span> resolutions:</p>
+        <p>The loss compares the log-mel representations of the target and reconstruction, averaging over <span class="math">K</span> resolutions:</p>
 
         <div class="math display-math">\mathcal{L}_{\mathrm{logmel}}=
 \frac{1}{K}\sum_{k=1}^{K}
@@ -837,7 +837,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 \mathcal{L}_{\mathrm{STFT}}+
 \mathcal{L}_{\mathrm{logmel}}</div>
 
-        <p>Importantly, <strong>this is the only training objective</strong>. We still log waveform MSE and parameter errors for evaluation, but don't use them to compute gradients.</p>
+        <p>Importantly, <strong>this is the only training objective</strong>. I still log waveform MSE and parameter errors for evaluation, but don't use them to compute gradients.</p>
 
         <h3>Training Through the Synth</h3>
 
@@ -847,7 +847,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>Both models were trained on the same 100,000 synthetic sounds, using AdamW with a learning rate of <span class="math">10^{-3}</span>, batch size 128, and 50 epochs. Each run took about 16 hours, including validation.</p>
 
-        <p>The network still predicts all 13 continuous controls and both oscillator selections. During training, waveform selection uses soft mixtures to allow gradients to flow. For validation and testing, we use discrete oscillator choices and EMA weights, matching the final preset behavior.</p>
+        <p>The network still predicts all 13 continuous controls and both oscillator selections. During training, waveform selection uses soft mixtures to allow gradients to flow. Validation and testing use discrete oscillator choices and EMA weights, matching the final preset behavior.</p>
 
         <figure class="pretraining-errors" id="audio-training-comparison" aria-labelledby="audio-training-caption">
           <img src="../../assets/audio-loss-training-comparison.svg" width="740" height="330" loading="lazy" alt="Validation results over 50 epochs. Parameter-pretrained initialization gives lower audio loss than training from scratch, but its waveform classification accuracy declines during fine-tuning. Diamonds show the held-out test results at epoch 50.">
@@ -858,9 +858,9 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>Interestingly, the two models recovered both original oscillator waveforms correctly in only 24.3% and 67.6% of examples, respectively. Waveform classification accuracy also declined during fine-tuning, even as reconstruction loss improved.</p>
 
-        <p>This highlights an important distinction: <strong>the parameters that best reproduce a sound aren't necessarily the ones that originally generated it</strong>. Since our objective is audio reconstruction, the network is free to find alternative presets that produce similar results.</p>
+        <p>This highlights an important distinction: <strong>the parameters that best reproduce a sound aren't necessarily the ones that originally generated it</strong>. With audio reconstruction as the objective, the network is free to find alternative presets that produce similar results.</p>
 
-        <p>We can also listen to the difference. Below are two held-out examples, comparing the original recording, the parameter-pretrained model before fine-tuning, and both models trained with the audio loss.</p>
+        <p>The difference can also be heard in the reconstructions. Below are two held-out examples, comparing the original recording, the parameter-pretrained model before fine-tuning, and both models trained with the audio loss.</p>
 
         <div class="pretraining-examples" id="audio-training-previews">
           <div class="pretraining-example">
@@ -885,19 +885,19 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>To my ears, the fine-tuned reconstructions sound a little closer to the originals, which is consistent with the lower audio loss.</p>
 
-        <p>Overall, these results suggest that parameter-space pretraining provides a useful starting point for audio reconstruction, at least in this synthetic setting and within the training budget tested. The next challenge is to move beyond sounds generated by our own synthesizer.</p>
+        <p>Overall, these results suggest that parameter-space pretraining provides a useful starting point for audio reconstruction, at least in this synthetic setting and within the training budget tested. The next challenge is to move beyond sounds generated by Ava.</p>
       </section>
 
       <section id="text-conditioned-data-generation" class="article-section learning-section" aria-labelledby="from-text-to-synth-presets">
         <h2 id="from-text-to-synth-presets">6. From Text to Synth Presets</h2>
 
-        <p>So far, we've only trained on sounds generated by Ava itself. But to build a text-to-synth system, we need to learn from a wider variety of sounds, including those our synthesizer might not be able to reproduce exactly.</p>
+        <p>So far, I've only trained on sounds generated by Ava itself. But a text-to-synth system needs to learn from a wider variety of sounds, including those Ava might not be able to reproduce exactly.</p>
 
         <p>Rather than collecting recordings and descriptions by hand, I decided to use a pretrained text-to-audio model to generate the training data.</p>
 
         <h3>Generating Audio from Text</h3>
 
-        <p>I used <a href="https://huggingface.co/stabilityai/stable-audio-3-small-sfx">Stable Audio 3 Small SFX</a><sup><a href="#ref-stable-audio-3" aria-label="Reference 4: Stable Audio 3">[4]</a></sup>, a text-conditioned latent diffusion model operating in the SAME-S latent space. Starting from random noise, it generates an audio latent in just eight sampling steps. We can then feed this latent directly to our parameter prediction network, or decode it into audio to use as a reconstruction target.</p>
+        <p>I used <a href="https://huggingface.co/stabilityai/stable-audio-3-small-sfx">Stable Audio 3 Small SFX</a><sup><a href="#ref-stable-audio-3" aria-label="Reference 4: Stable Audio 3">[4]</a></sup>, a text-conditioned latent diffusion model operating in the SAME-S latent space. Starting from random noise, it generates an audio latent in just eight sampling steps. This latent can be passed directly to the parameter prediction network, or decoded into audio to use as a reconstruction target.</p>
 
         <p>Since the generator would eventually run locally in the plugin, I also quantized its weights to reduce memory usage. Specifically, the linear layers of the text encoder and latent generator use INT8 weights, while the remaining operations stay in floating point.</p>
 
@@ -929,7 +929,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <h3>Pitch and Note Timing</h3>
 
-        <p>There's still one problem: even when we ask the generative model to produce a specific note, it doesn't always get the pitch right.</p>
+        <p>There's still one problem: the generative model doesn't always get the pitch right, even when the prompt asks for a specific note.</p>
 
         <p>To check this, I used <a href="https://github.com/maxrmorrison/torchcrepe">CREPE</a><sup><a href="#ref-torchcrepe" aria-label="Reference 6: torchcrepe">[6]</a></sup>, through <code>torchcrepe</code>, to estimate the fundamental frequency of each generated recording. After excluding quiet sections and unreliable predictions, I kept sounds whose estimated pitch stayed close to the requested note.</p>
 
@@ -943,11 +943,11 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <h3>Training the Parameter Mapper</h3>
 
-        <p>With the dataset ready, we can finally train the text-to-synth model.</p>
+        <p>With the dataset ready, I could finally train the text-to-synth model.</p>
 
         <p>Each example contains the generated latent, its decoded audio, and the corresponding pitch and note timing. The prediction network receives the original SAME-S latent directly, without additional encoding or normalization.</p>
 
-        <p>As in the previous experiment, it predicts the synthesizer parameters, renders the corresponding audio through our differentiable synth, and minimizes the STFT and log-mel reconstruction losses against the decoded reference.</p>
+        <p>As in the previous experiment, it predicts the synthesizer parameters, renders the corresponding audio through the differentiable synth, and minimizes the STFT and log-mel reconstruction losses against the decoded reference.</p>
 
         <p>There are no ground-truth synth parameters this time. <strong>The network simply learns to find the preset that best approximates each generated sound.</strong></p>
 
@@ -977,9 +977,9 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>The best model trained from scratch achieved a test audio loss of <strong>1.888</strong>, compared with <strong>1.901</strong> for the best fine-tuned model, a difference of less than 1%.</p>
 
-        <p>Pretraining helped at the lower learning rate, but not at the higher one. The differences are small, and with only one seed per configuration, it's difficult to draw strong conclusions. Still, pretraining seems to offer less of an advantage here than it did when reconstructing our synthetic data.</p>
+        <p>Pretraining helped at the lower learning rate, but not at the higher one. The differences are small, and with only one seed per configuration, it's difficult to draw strong conclusions. Still, pretraining seems to offer less of an advantage here than it did when reconstructing the synthetic data.</p>
 
-        <p>Of course, numerical losses only tell us so much. What really matters is how the resulting presets sound.</p>
+        <p>Of course, numerical losses only tell part of the story. What really matters is how the resulting presets sound.</p>
       </section>
 
       <section class="article-section listening-section" aria-labelledby="lets-have-a-listen">
@@ -998,7 +998,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
         <details class="strategy-comparison" id="comparing-training-strategies">
           <summary><h3>Comparing Training Strategies</h3></summary>
           <div class="strategy-comparison-body">
-            <p>We can also hear how the two training strategies compare. Below are four examples showing the original generated sound alongside reconstructions from the best fine-tuned and scratch-trained models.</p>
+            <p>The two training strategies can also be compared by ear. Below are four examples showing the original generated sound alongside reconstructions from the best fine-tuned and scratch-trained models.</p>
             <div class="pretraining-examples" id="text-audio-previews">
           <div class="pretraining-example">
             <h4>Guitar · D♯4</h4>
@@ -1048,7 +1048,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>For example, the text-to-audio model sometimes generates sounds that don't quite match the prompt. To my ears, the guitars and pianos often sound surprisingly similar, and one of the bamboo flute examples even slipped through the pitch check with an incorrect note. Better prompts and more reliable data generation would already help.</p>
 
-        <p>On the reconstruction side, Ava seems to struggle particularly with plucky sounds, complex distortion, and evolving dynamics. Some of this is probably due to the limited expressiveness of the synthesizer, but our earlier experiments also showed that optimization can be difficult even when the synth is capable of reproducing the target.</p>
+        <p>On the reconstruction side, Ava seems to struggle particularly with plucky sounds, complex distortion, and evolving dynamics. Some of this is probably due to the limited expressiveness of the synthesizer, but my earlier experiments also showed that optimization can be difficult even when the synth is capable of reproducing the target.</p>
 
         <p>Still, several of the bass, piano, flute, and trumpet examples sound pretty convincing to me. And even when the reconstruction isn't particularly faithful, the resulting preset can be interesting in its own right.</p>
 
@@ -1141,7 +1141,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>Some sounds came surprisingly close to the reference, while others were considerably less convincing. Still, I'm quite happy with what Ava can already do, especially considering how simple the synthesizer is.</p>
 
-        <p>There's plenty of room for improvement. The most obvious direction is to make the synth more expressive, with additional oscillators, effects, and more flexible modulation. But the synth itself isn't the only limitation. Our experiments showed that some parameters were difficult to optimize even when an exact match was possible, suggesting that better losses, training strategies, and models could also improve the results. And, of course, more reliable text-to-audio generation would help us start with better training data.</p>
+        <p>There's plenty of room for improvement. The most obvious direction is to make the synth more expressive, with additional oscillators, effects, and more flexible modulation. But the synth itself isn't the only limitation. My experiments showed that some parameters were difficult to optimize even when an exact match was possible, suggesting that better losses, training strategies, and models could also improve the results. And, of course, more reliable text-to-audio generation would provide better training data.</p>
 
         <p>Beyond the results, this was a really fun project. I got to combine two things I've been interested in for a long time, music production and generative modeling, and learned quite a bit about both along the way.</p>
 
