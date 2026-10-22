@@ -800,23 +800,19 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>With the generated dataset in place, I could finally train the mapper on sounds that weren't made by Ava. There are no correct preset labels to recover here: the goal is to find a good approximation within the synth's capabilities.</p>
 
-        <p>The <a href="#text-mapper-training">training loop</a> is the same as in the synthetic audio-loss experiment: predict a preset, render it through the differentiable synth, and compare the result with the target using the long-window STFT and log-mel loss.</p>
+        <p>The training loop is the same as in the synthetic audio-loss experiment: predict a preset, render it through the differentiable synth, and compare the result with the target using the long-window STFT and log-mel loss.</p>
 
         <h3>Does parameter-space pretraining help?</h3>
 
         <p>The parameter-pretrained network already knows something about the synth controls, which seems like a useful starting point. But it learned from randomly sampled synthetic presets. The text-generated sounds are more varied, and many can't be reproduced exactly by Ava. Pretraining might help, or it might steer the model towards settings that worked better for the earlier dataset.</p>
 
-        <p>I compared two starting points:</p>
-        <ul>
-          <li><strong>Fine-tuning:</strong> start with the weights learned through direct parameter supervision.</li>
-          <li><strong>Training from scratch:</strong> start the same network with random weights.</li>
-        </ul>
+        <p>As before, I tried both fine-tuning from the parameter-supervised weights and training from scratch.</p>
 
-        <p>For each, I tried learning rates of <span class="math">10^{-3}</span> and <span class="math">10^{-4}</span>. All four runs used the same 440k-parameter Transformer, 10,000 training sounds, AdamW, batch size 128 and 200 epochs. The audio objective was unchanged: STFT plus log-mel, with equal weights and no parameter-supervision term. Each run took about <strong>5.5–6.2 hours on an A100 40 GB</strong>.</p>
+        <p>For each, I tried learning rates of <span class="math">10^{-3}</span> and <span class="math">10^{-4}</span>. All four runs used the same 440k-parameter Transformer, 10,000 training sounds, AdamW, batch size 128 and 200 epochs. Each run took about <strong>5.5–6.2 hours on an A100 40 GB</strong>.</p>
 
         <figure class="pretraining-errors" id="text-audio-training-comparison" aria-labelledby="text-audio-training-caption">
-          <img src="../../assets/text-audio-training-comparison.svg" width="740" height="440" loading="lazy" alt="Training and validation audio losses over 200 epochs for fine-tuning and training from scratch at learning rates 0.001 and 0.0001. Validation uses a logarithmic axis; the final losses are close for all four runs.">
-          <figcaption id="text-audio-training-caption">Training uses soft oscillator mixtures; validation uses discrete choices and EMA weights. Dots mark the lowest-validation-loss checkpoints. Validation axes are logarithmic.</figcaption>
+          <img src="../../assets/text-audio-training-comparison.svg?v=validation-only" width="740" height="300" loading="lazy" alt="Validation audio losses over 200 epochs for fine-tuning and training from scratch at learning rates 0.001 and 0.0001. Logarithmic axes show close final losses for all four runs.">
+          <figcaption id="text-audio-training-caption">Validation uses discrete oscillator choices and EMA weights. Dots mark the selected checkpoints; axes are logarithmic.</figcaption>
         </figure>
 
         <p>I selected each checkpoint by validation loss, then evaluated it on the same 1,000 held-out sounds:</p>
@@ -825,7 +821,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
           <tbody><tr><th scope="row">Fine-tuned</th><td><span class="math">10^{-3}</span></td><td>83</td><td>1.912</td></tr><tr><th scope="row">From scratch</th><td><span class="math">10^{-3}</span></td><td>197</td><td><strong>1.888</strong></td></tr><tr><th scope="row">Fine-tuned</th><td><span class="math">10^{-4}</span></td><td>156</td><td>1.901</td></tr><tr><th scope="row">From scratch</th><td><span class="math">10^{-4}</span></td><td>198</td><td>1.918</td></tr></tbody>
         </table>
 
-        <p>The best scratch model reached <strong>1.888</strong>, compared with <strong>1.901</strong> for the best fine-tuned model: about <strong>0.6% lower</strong>. Pretraining helped at the lower learning rate, but not at the higher one. The difference is small, and these four runs use only one seed per configuration, so I wouldn't take this as a general argument against pretraining.</p>
+        <p>The best scratch model reached <strong>1.888</strong>, compared with <strong>1.901</strong> for the best fine-tuned model: about <strong>0.6% lower</strong>. Pretraining helped at the lower learning rate, but not at the higher one. The difference is small, and these four runs use only one seed per configuration, so I wouldn't take this as a general argument against pretraining. It does seem less useful here than when reconstructing our synthetic data.</p>
 
         <h3>Listening to the results</h3>
 
@@ -842,12 +838,12 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
             </div>
           </div>
           <div class="pretraining-example">
-            <h4>Pad · C5</h4>
-            <p>“a soft organ-like pad with a steady rounded sound, warm and fuzzy.”</p>
+            <h4>Piano · E3</h4>
+            <p>“a rounded vintage electric piano with a gentle buzz, hollow and woody.”</p>
             <div class="reconstruction-audio">
-              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-002-target.wav" aria-label="Pad: generated audio">Your browser does not support audio playback.</audio></div>
-              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-002-pretrained.wav" aria-label="Pad: fine-tuned">Your browser does not support audio playback.</audio></div>
-              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-002-scratch.wav" aria-label="Pad: from scratch">Your browser does not support audio playback.</audio></div>
+              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-004-target.wav" aria-label="Piano: generated audio">Your browser does not support audio playback.</audio></div>
+              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-004-pretrained.wav" aria-label="Piano: fine-tuned">Your browser does not support audio playback.</audio></div>
+              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-004-scratch.wav" aria-label="Piano: from scratch">Your browser does not support audio playback.</audio></div>
             </div>
           </div>
           <div class="pretraining-example">
@@ -860,12 +856,12 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
             </div>
           </div>
           <div class="pretraining-example">
-            <h4>Strings · E4</h4>
-            <p>“a thin nasal vintage string-synth tone.”</p>
+            <h4>Bass · F2</h4>
+            <p>“a short muted funk bass pluck, gently wavering.”</p>
             <div class="reconstruction-audio">
-              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-006-target.wav" aria-label="Strings: generated audio">Your browser does not support audio playback.</audio></div>
-              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-006-pretrained.wav" aria-label="Strings: fine-tuned">Your browser does not support audio playback.</audio></div>
-              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-006-scratch.wav" aria-label="Strings: from scratch">Your browser does not support audio playback.</audio></div>
+              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-008-target.wav" aria-label="Bass: generated audio">Your browser does not support audio playback.</audio></div>
+              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-008-pretrained.wav" aria-label="Bass: fine-tuned">Your browser does not support audio playback.</audio></div>
+              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-008-scratch.wav" aria-label="Bass: from scratch">Your browser does not support audio playback.</audio></div>
             </div>
           </div>
         </div>
