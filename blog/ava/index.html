@@ -1139,17 +1139,13 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>So, did it work? Well, sort of!</p>
 
-        <p>Some sounds came out surprisingly close to the reference, while others were considerably less convincing. The results aren't always what I had in mind when starting the project, but I think they're encouraging, especially considering how simple the synthesizer is.</p>
+        <p>Some sounds came surprisingly close to the reference, while others were considerably less convincing. Still, I'm quite happy with what Ava can already do, especially considering how simple the synthesizer is.</p>
 
-        <p>The most obvious limitation is the synth itself. With only two oscillators, a low-pass filter and a handful of modulation controls, there are plenty of sounds it simply cannot reproduce. More oscillators, effects like reverb and chorus, and more flexible modulation, such as vibrato or additional envelopes, would expand the range of sounds we could make.</p>
+        <p>There's plenty of room for improvement. The most obvious direction is to make the synth more expressive, with additional oscillators, effects, and more flexible modulation. But the synth itself isn't the only limitation. Our experiments showed that some parameters were difficult to optimize even when an exact match was possible, suggesting that better losses, training strategies, and models could also improve the results. And, of course, more reliable text-to-audio generation would help us start with better training data.</p>
 
-        <p>But the synth isn't the only possible bottleneck. Some parameters were difficult to optimize even when the target came from the same engine, so a perfect solution was available. The prediction network, reconstruction loss and training procedure may also be holding us back. Better optimization and more carefully designed training data could improve the results without changing the synth at all.</p>
+        <p>Beyond the results, this was a really fun project. I got to combine two things I've been interested in for a long time, music production and generative modeling, and learned quite a bit about both along the way.</p>
 
-        <p>I'd also like to improve the connection between descriptions and sounds. As we heard in the examples, a reference that already misses the prompt gives Ava the wrong starting point. More reliable text-conditioned generation would help, alongside exploring how this approach works with a more expressive synthesizer.</p>
-
-        <p>Beyond the results, this was a really fun project. I got to combine two things I've been interested in for a long time, audio synthesis and generative modeling, and learned quite a bit about both. Most of the development happened on my MacBook M1 Pro, with A100 GPUs for the longer audio-loss training runs.</p>
-
-        <p>Ava is still far from replacing the endless scrolling through presets that originally motivated the project. But it feels like a promising starting point, and there's something quite satisfying about describing a sound in words and seeing a synthesizer try to bring it to life.</p>
+        <p>Ava hasn't quite solved the endless preset-scrolling problem that originally motivated the project. But having something that can turn a sound description into a playable, editable synth preset feels like a pretty good start.</p>
       </section>
 
       <section class="article-section" aria-labelledby="a-note-on-using-llms">
