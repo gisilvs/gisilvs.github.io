@@ -6,7 +6,7 @@
   <meta name="description" content="Building Ava, a differentiable synthesizer that turns natural language descriptions into playable presets.">
   <title>Ava: Text-to-Synth — Gianluigi Silvestri</title>
   <link rel="canonical" href="https://gisilvs.github.io/blog/ava/">
-  <link rel="stylesheet" href="../../style.css?v=latent-learning">
+  <link rel="stylesheet" href="../../style.css?v=audio-reconstruction">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
   <script defer src="deep-dive.js"></script>
@@ -46,7 +46,7 @@
 
         <p>The result is <strong>Ava</strong>: a simple subtractive synthesizer that lets you generate presets from natural language descriptions, while still being able to play and tweak them like in any regular synth.</p>
 
-        <p>In this post, I'll walk through the synthesizer implementation, the training experiments, what worked (and what didn't), and how everything came together in a working plugin. Most of the project was developed on my MacBook M1 Pro, with a few hours of A100 GPU time for the more expensive experiments, and plenty of help from the open-source community.</p>
+        <p>In this post, I'll walk through the synthesizer implementation, the training experiments, what worked (and what didn't), and how everything came together in a working plugin. I developed most of the project on my MacBook M1 Pro and used NVIDIA A100 GPUs for the more expensive audio-loss experiments, with plenty of help from the open-source community.</p>
 
         <p>And why Ava? It's named after the robot protagonist of <em>Ex Machina</em>, the movie that inspired me to study AI many years ago.</p>
       </section>
@@ -548,6 +548,8 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>With these labeled examples, we can start by predicting the original parameters directly. <strong>No audio needs to be rendered for the training updates</strong>, so this stage is much cheaper than learning through the synthesizer.</p>
 
+        <p>I ran this stage, including data generation, encoding and parameter-supervised training, on my MacBook M1 Pro.</p>
+
         <h3>A small Transformer</h3>
 
         <p>I used a small Transformer with <strong>about 440,000 parameters</strong>. It maps the latent sequence to 13 continuous controls in <span class="math">[0,1]</span> through sigmoid activations, and four logits for each oscillator. Softmax turns each set of logits into waveform probabilities; cross-entropy uses the logits directly.</p>
@@ -659,6 +661,83 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>The next step is therefore to train through the synthesizer: <strong>compare the audio produced by the predicted preset with the target sound</strong>, instead of comparing their parameter values.</p>
       </section>
+      <section class="article-section learning-section" aria-labelledby="audio-reconstruction-loss">
+        <h2 id="audio-reconstruction-loss">7. Can We Recover the Parameters with an Audio Reconstruction Loss?</h2>
+
+        <p>Parameter supervision gave us a useful starting point. Now we pass the network's predicted presets through the synth and compare the rendered audio with the target. This also lets us learn from sounds whose original synthesizer settings we don't know.</p>
+
+        <p>As we saw earlier, waveform MSE is sensitive to phase and alignment. For arbitrary recordings, a spectral comparison is a more useful starting point.</p>
+
+        <h3>Moving to a spectral loss</h3>
+
+        <p>The <strong>short-time Fourier transform (STFT)</strong> splits a waveform into overlapping windows and measures the frequency content in each. Comparing their magnitudes makes the loss less sensitive to phase, while retaining information about how the sound changes over time.</p>
+
+        <p>Short windows locate attacks and other quick changes more precisely. Long windows distinguish nearby frequencies more clearly, which is useful for detuning. A <strong>multi-resolution STFT loss</strong> combines both views.</p>
+
+        <p>I used <a href="https://github.com/csteinmetz1/auraloss">auraloss</a><sup><a href="#ref-auraloss" aria-label="Reference 5: auraloss">[5]</a></sup> to compare each pair of magnitude spectrograms in two ways: their relative difference, called <em>spectral convergence</em>, and the mean absolute difference between their log magnitudes:</p>
+
+        <div class="math display-math">\mathcal{L}_{\mathrm{STFT}}=\frac{1}{R}\sum_{r=1}^{R}\left(\frac{\lVert M_r-\hat M_r\rVert_F}{\lVert M_r\rVert_F}+\operatorname{mean}\left|\log M_r-\log\hat M_r\right|\right)</div>
+
+        <p>Here, <span class="math">M_r</span> and <span class="math">\hat M_r</span> are the target and reconstructed magnitudes at resolution <span class="math">r</span>. Both terms have weight one. The logarithm gives quieter frequency components more influence; a small magnitude floor keeps it finite.</p>
+
+        <h3>Does this make recovery easier?</h3>
+
+        <p>I first repeated the direct preset-fitting test using seven STFT resolutions, from 32 to 2,048 samples. In one joint fit, a 2 Hz LFO was recovered at <strong>2.002 Hz with STFT, versus 1.696 Hz with MSE</strong>. But both fits pushed attack and decay close to zero, compensating with other controls. After making the oscillator choices discrete, the MSE fit actually had the lower STFT error.</p>
+
+        <p>This was one preset, and neither loss recovered all its parameters. A spectral loss changes the optimization landscape; it doesn't remove local minima or interactions between controls.</p>
+
+        <h3>The loss I kept</h3>
+
+        <p>After further tests in which the network tried to memorize 16 synthetic examples, I kept the longer-window STFT loss and added <strong>log-mel L1</strong>. This groups the magnitudes into bands spaced more finely at low frequencies, giving us another comparison of the sound's broad spectral shape.</p>
+
+        <p>The settings for mono audio at 24 kHz are:</p>
+        <ul>
+          <li><strong>STFT:</strong> window sizes doubling from 32 to 16,384 samples, with equally weighted spectral-convergence and log-magnitude L1 terms. A fixed A-weighting filter reduces emphasis on very low and high frequencies before computing the spectrograms.</li>
+          <li><strong>Log-mel:</strong> 32 bands at window sizes 256, 512, 1,024 and 2,048, using log-magnitude L1 without A-weighting.</li>
+        </ul>
+
+        <p>Both use matching FFT and window lengths, Hann windows, hops of one quarter of the window length, and an average over resolutions. The two losses are added with equal weight:</p>
+
+        <div class="math display-math">\mathcal{L}_{\mathrm{audio}}=\mathcal{L}_{\mathrm{STFT}}+\mathcal{L}_{\mathrm{logmel}}</div>
+
+        <p>These runs optimize only that audio objective. Waveform MSE and parameter errors are logged as diagnostics; there is no additional waveform, phase or parameter-supervision term.</p>
+
+        <h3>Training through the synth</h3>
+
+        <p>This stage is considerably more expensive, so I moved the full training runs to <strong>NVIDIA A100 40 GB GPUs</strong>. I compared random initialization with parameter-supervised initialization, using the same 440k-parameter Transformer and the same 100,000 synthetic training sounds. Both runs used AdamW at <span class="math">10^{-3}</span>, batch size 128, and 50 epochs. Each logged <strong>about 16 hours</strong>, including validation.</p>
+
+        <p>The network predicts all 13 continuous controls and both oscillator choices. During training, the oscillators use soft mixtures; validation and test use discrete choices and EMA weights. Ground-truth presets are used only to measure recovery, while gradients come entirely from the audio loss.</p>
+
+        <figure class="pretraining-errors" id="audio-training-comparison" aria-labelledby="audio-training-caption">
+          <img src="../../assets/audio-loss-training-comparison.svg" width="740" height="330" loading="lazy" alt="Validation results over 50 epochs. Parameter-pretrained initialization gives lower audio loss than training from scratch, but its waveform classification accuracy declines during fine-tuning. Diamonds show the held-out test results at epoch 50.">
+          <figcaption id="audio-training-caption">Validation curves use EMA weights and discrete oscillator choices. Diamonds show test results from the selected checkpoints, both at epoch 50. Waveform accuracy is a diagnostic, not part of the training objective.</figcaption>
+        </figure>
+
+        <p>On the 10,000 held-out test sounds, the audio loss was <strong>1.150 from scratch and 0.910 with pretraining</strong>, about 21% lower. Both oscillators were classified correctly in <strong>24.3% and 67.6%</strong> of examples, respectively. Pretraining helped at this training budget, but the falling classification accuracy during fine-tuning shows that improving the audio objective doesn't necessarily preserve the original preset.</p>
+
+        <p>Here are two higher-pitched test previews after 50 epochs of audio-loss training, using the same target and latent input for both models:</p>
+
+        <div class="pretraining-examples" id="audio-training-previews">
+          <div class="pretraining-example">
+            <h4>C5</h4>
+            <div class="reconstruction-audio">
+              <div><p>Original</p><audio controls preload="metadata" src="../../assets/audio-loss-004-target.wav" aria-label="C5: original">Your browser does not support audio playback.</audio></div>
+              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/audio-loss-004-scratch.wav" aria-label="C5: from scratch">Your browser does not support audio playback.</audio></div>
+              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/audio-loss-004-pretrained.wav" aria-label="C5: fine-tuned">Your browser does not support audio playback.</audio></div>
+            </div>
+          </div>
+          <div class="pretraining-example">
+            <h4>F3</h4>
+            <div class="reconstruction-audio">
+              <div><p>Original</p><audio controls preload="metadata" src="../../assets/audio-loss-006-target.wav" aria-label="F3: original">Your browser does not support audio playback.</audio></div>
+              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/audio-loss-006-scratch.wav" aria-label="F3: from scratch">Your browser does not support audio playback.</audio></div>
+              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/audio-loss-006-pretrained.wav" aria-label="F3: fine-tuned">Your browser does not support audio playback.</audio></div>
+            </div>
+          </div>
+        </div>
+
+        <p>Ultimately, recovering the original parameters and reconstructing the sound are different goals. For text-generated audio, we won't have preset labels at all: we'll be looking for a good approximation within Ava's capabilities. That's the next step.</p>
+      </section>
       <section class="article-section references-section" aria-labelledby="references">
         <h2 id="references">References</h2>
         <ol>
@@ -666,6 +745,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
           <li id="ref-encodec">Alexandre Défossez et al. <a href="https://arxiv.org/abs/2210.13438">High Fidelity Neural Audio Compression</a>. 2022.</li>
           <li id="ref-music2latent">Marco Pasini, Stefan Lattner and George Fazekas. <a href="https://arxiv.org/abs/2408.06500">Music2Latent: Consistency Autoencoders for Latent Audio Compression</a>. 2024.</li>
           <li id="ref-stable-audio-3">Zach Evans et al. <a href="https://arxiv.org/abs/2605.17991">Stable Audio 3</a>. 2026.</li>
+          <li id="ref-auraloss">Christian J. Steinmetz and Joshua D. Reiss. <a href="https://github.com/csteinmetz1/auraloss">auraloss: Audio focused loss functions in PyTorch</a>. DMRN+15, 2020.</li>
         </ol>
       </section>
     </article>
