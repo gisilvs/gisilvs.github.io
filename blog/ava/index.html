@@ -985,20 +985,20 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
       <section class="article-section listening-section" aria-labelledby="lets-have-a-listen">
         <h2 id="lets-have-a-listen">7. Results: Let's Have a Listen!</h2>
 
-        <p>Enough about losses. Pick an instrument and have a listen: each description comes with the text-generated reference and Ava's attempt to recreate it. All the Ava clips in the main gallery use the best network trained from scratch.</p>
+        <p>Enough about training and losses. Let's finally hear what Ava can do!</p>
+
+        <p>Pick an instrument below to compare the audio generated from a text description with Ava's attempt to recreate it. All reconstructions in the main gallery use the best model trained from scratch.</p>
 
         <div id="instrument-tabs" class="instrument-tabs" role="group" aria-label="Choose an instrument family"></div>
         <p id="gallery-loading" role="status">Loading the sounds…</p>
         <div id="sound-gallery" class="sound-gallery" aria-label="Sound examples"></div>
         <noscript><p>Enable JavaScript to browse the gallery and play the synth. The quick preview and the training-strategy comparisons work without it.</p></noscript>
-        <p class="gallery-note">These are held-out test examples, chosen for variety rather than ranked by reconstruction quality. References were decoded from their saved latents; the clips haven't been loudness-matched.</p>
+        <p class="gallery-note">These are held-out test examples, selected for variety rather than reconstruction quality. The reference audio was decoded from the saved latents, and the recordings haven't been loudness-matched.</p>
 
         <details class="strategy-comparison" id="comparing-training-strategies">
           <summary><h3>Comparing Training Strategies</h3></summary>
           <div class="strategy-comparison-body">
-            <p>To hear how initialization affects the results, here are four examples comparing the best model fine-tuned from parameter supervision with the best model trained from scratch. Each is shown alongside the original text-generated reference.</p>
-            <p>The examples come from the held-out test set, and the recordings haven't been loudness-matched.</p>
-            <p>The fine-tuned model uses a learning rate of <span class="math">10^{-4}</span>, and the scratch model uses <span class="math">10^{-3}</span>. Both use discrete oscillator choices. The piano reference was decoded again from its saved test latent.</p>
+            <p>We can also hear how the two training strategies compare. Below are four examples showing the original generated sound alongside reconstructions from the best fine-tuned and scratch-trained models.</p>
             <div class="pretraining-examples" id="text-audio-previews">
           <div class="pretraining-example">
             <h4>Guitar · D♯4</h4>
@@ -1038,21 +1038,25 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
           </div>
         </div>
 
-            <p>Overall, I think the fit is decent. The reconstructions don't capture every detail, but they often get close enough to give us something useful to play and tweak. Some of the remaining differences likely come from Ava's limited range of sounds, and some from the difficulty of training through the synth: even when a closer match is possible, finding it isn't always easy.</p>
+            <p><em>The fine-tuned model uses a learning rate of <span class="math">10^{-4}</span>, while the scratch model uses <span class="math">10^{-3}</span>. Both use discrete oscillator selections. The piano reference was re-decoded from its saved test latent, and the recordings haven't been loudness-matched.</em></p>
           </div>
         </details>
 
         <h3>Where Things Go Off Track</h3>
 
-        <p>Some of the references already miss the intended sound. To my ears, the generated guitars and pianos often sound surprisingly similar. The bamboo flute example also slipped through the pitch check, so that check needs improvement too. Better prompts and more reliable generation would help us start with more convincing, distinct sounds.</p>
+        <p>Some sounds work considerably better than others, and the problems don't always come from Ava.</p>
 
-        <p>Ava also seems to reproduce some kinds of sounds more faithfully than others, regardless of the instrument label. Plucky sounds, complex distortion and changing dynamics seem harder to capture in these examples. Some of this comes from the synth's limits, and some from the difficulty of training it to find a good fit.</p>
+        <p>For example, the text-to-audio model sometimes generates sounds that don't quite match the prompt. To my ears, the guitars and pianos often sound surprisingly similar, and one of the bamboo flute examples even slipped through the pitch check with an incorrect note. Better prompts and more reliable data generation would already help.</p>
+
+        <p>On the reconstruction side, Ava seems to struggle particularly with plucky sounds, complex distortion, and evolving dynamics. Some of this is probably due to the limited expressiveness of the synthesizer, but our earlier experiments also showed that optimization can be difficult even when the synth is capable of reproducing the target.</p>
+
+        <p>Still, several of the bass, piano, flute, and trumpet examples sound pretty convincing to me. And even when the reconstruction isn't particularly faithful, the resulting preset can be interesting in its own right.</p>
 
         <h3>Play and Tweak the Presets</h3>
 
-        <p>The fun part is that these aren't just audio samples. Load a preset from the gallery, play it at another pitch, or turn a few knobs and take it somewhere else.</p>
+        <p>And that's probably my favorite part of the project: <strong>these aren't just generated audio samples, but actual synthesizer presets</strong>.</p>
 
-        <p>This browser demo uses Ava's C++ synthesis engine, compiled to WebAssembly. <strong>Text generation is disabled here</strong>; it loads the precomputed example presets. In the desktop plugin, the Generate button lets you create new presets from your own descriptions.</p>
+        <p>Try loading an example from the gallery, playing it at a different pitch, or adjusting a few parameters to see how the sound changes.</p>
 
         <div class="browser-synth" id="browser-synth" role="region" aria-label="Interactive Ava synthesizer">
           <div class="demo-header">
@@ -1104,7 +1108,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
           <div class="demo-footer"><span><span id="demo-register"></span> · 8 voices · output limiter</span></div>
         </div>
 
-        <p>Overall, I'm quite happy with some of the bass, piano, flute and trumpet examples. The other families still need some work, although even the less faithful reconstructions can be interesting sounds in their own right. It's not always the preset I had in mind, but it's already a fun tool to play with.</p>
+        <p>The browser demo uses the C++ synthesizer compiled to WebAssembly, with presets generated in advance. Click <em>Enable audio</em> to start playing. Text generation is only available in the desktop plugin, where you can enter your own descriptions and generate new presets.</p>
       </section>
 
       <section id="deployment-to-cpp" class="article-section" aria-labelledby="bringing-ava-to-cpp">
