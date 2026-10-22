@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Building Ava, a differentiable synthesizer that turns natural language descriptions into playable presets.">
-  <title>Ava: Text-to-Synth — Gianluigi Silvestri</title>
+  <title>Ava: Turning Text into Synth Presets — Gianluigi Silvestri</title>
   <link rel="canonical" href="https://gisilvs.github.io/blog/ava/">
-  <link rel="stylesheet" href="../../style.css?v=text-audio-finetuning">
+  <link rel="stylesheet" href="../../style.css?v=article-introduction">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
   <script defer src="deep-dive.js"></script>
@@ -28,9 +28,37 @@
     <article aria-labelledby="article-heading">
       <header class="article-header">
         <p class="eyebrow">Work in progress</p>
-        <h1 id="article-heading">Ava: Text-to-Synth</h1>
+        <h1 id="article-heading">Ava: Turning Text into Synth Presets</h1>
+        <p class="article-subtitle">Building a differentiable synthesizer and teaching a neural network to control it.</p>
         <p class="article-byline">By Gianluigi Silvestri</p>
       </header>
+
+      <section class="article-section" aria-labelledby="abstract">
+        <h2 id="abstract">Abstract</h2>
+        <p>What if, instead of endlessly scrolling through synthesizer presets, you could simply describe the sound you wanted?</p>
+        <p>In this post, I'll walk through <strong>Ava</strong>, a text-to-synth synthesizer that turns natural language descriptions into editable presets. I built a differentiable synthesizer in PyTorch and trained a small neural network to predict its parameters from audio, using backpropagation through the synth itself. To make it work with text, I used a pretrained text-to-audio model to generate training data, and eventually brought everything together in a C++ plugin that runs locally.</p>
+        <p>The results are far from perfect, but some sounds come surprisingly close. Along the way, I'll share how I built it, the experiments I ran, what worked (and what didn't), and a few interactive demos you can play with yourself.</p>
+      </section>
+
+      <nav class="article-contents article-section" aria-labelledby="contents">
+        <h2 id="contents">Contents</h2>
+        <ol>
+          <li><a href="#preamble">Preamble</a></li>
+          <li><a href="#the-synth">The Synth</a></li>
+          <li><a href="#deep-dive-title">Deep Dive: Building a Differentiable Synthesizer in PyTorch</a></li>
+          <li><a href="#is-differentiation-through-the-synth-effective">Is Differentiation Through the Synth Effective?</a></li>
+          <li><a href="#data-and-training-strategies">Learning Synth Parameters from Audio Latents</a></li>
+          <li><a href="#parameter-space-pretraining">Parameter-Space Pretraining</a></li>
+          <li><a href="#audio-reconstruction-loss">Can We Recover the Parameters with an Audio Reconstruction Loss?</a></li>
+          <li><a href="#text-conditioned-data-generation">Text-Conditioned Data Generation</a></li>
+          <li><a href="#audio-space-fine-tuning">Audio-Space Fine-Tuning</a></li>
+          <li><a href="#lets-have-a-listen">Results: Let's Have a Listen!</a></li>
+          <li><a href="#deployment-to-cpp">Deployment to C++: From Model to Plugin</a></li>
+          <li><a href="#conclusions">Conclusions</a></li>
+          <li><a href="#a-note-on-using-llms">A Note on Using LLMs</a></li>
+          <li><a href="#references">References</a></li>
+        </ol>
+      </nav>
 
       <section class="article-section" aria-labelledby="preamble">
         <h2 id="preamble">1. Preamble</h2>
