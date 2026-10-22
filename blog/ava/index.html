@@ -449,7 +449,7 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
               <audio controls preload="metadata" src="../../assets/phase-sine-shifted.wav" aria-label="Listen to the phase-shifted sine wave">Your browser does not support audio playback.</audio>
             </div>
           </div>
-          <figcaption id="phase-caption">Same pitch and level, different phase: at 1 kHz, six samples at 24 kHz correspond to a 90° offset. The waveform MSE is about <strong>0.25</strong>, although the tones should sound the same when played separately. Both clips have matching short fades to avoid clicks.</figcaption>
+          <figcaption id="phase-caption">Same pitch and level, different phase: at 1 kHz, six samples at 24 kHz correspond to a 90° offset. The waveform MSE is about <strong>0.25</strong>, although the tones should sound the same when played separately.</figcaption>
         </figure>
 
         <p>However, our setting is a little different. Both the target and reconstructed audio come from the <strong>same deterministic synthesizer</strong>, with identical MIDI inputs, note timing, oscillator starting phase and noise realization. This removes many sources of mismatch, and we know that a parameter configuration capable of producing the exact target waveform exists.</p>
@@ -488,12 +488,12 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
               <p class="recovery-values">Recovered (Hz):<br><span class="recovery-seed-a">2</span> / <span class="recovery-seed-b">1.708</span> / <span class="recovery-seed-c">1.708</span></p>
             </div>
           </div>
-          <figcaption id="recovery-caption">All three seed groups are plotted, including the failures. Some curves overlap: the two failed LFO-rate runs settle at the same loss. Each curve shows the lowest MSE among four random restarts at each step; recovered values come from the best saved iterate. Losses below <span class="math">10^{-12}</span> are drawn at the bottom.</figcaption>
+          <figcaption id="recovery-caption">All three seed groups are plotted, including the failures. Some curves overlap: the two failed LFO-rate runs settle at the same loss. Each curve shows the lowest MSE among four random restarts at each step; recovered values come from the best saved iterate.</figcaption>
         </figure>
 
         <p><strong>Detuning and LFO rate were the main difficulties in the single-parameter tests.</strong> Detuning was recovered in two of the three seed groups, and LFO rate in one. All the other parameters were recovered in all three seed groups. These two can get stuck even when every other parameter is correct. A separate scan of the LFO-rate loss confirmed a local minimum near 1.708 Hz, away from the correct 2 Hz. Optimizing multiple parameters together adds further ambiguity, since changes in one parameter can be compensated by changes in another.</p>
 
-        <p>I also explored soft waveform selection and hard selection with a straight-through estimator. Soft selection lets the optimizer blend waveforms rather than immediately committing to one choice. I found soft selection much easier to fit. For these fitting tests, the saved preset is also evaluated with discrete oscillator choices: a good soft mixture doesn't necessarily remain a good match after taking the argmax.</p>
+        <p>I also explored soft waveform selection and hard selection with a straight-through estimator. Soft selection lets the optimizer blend waveforms rather than immediately committing to one choice. I found soft selection much easier to fit, although the saved preset is evaluated with discrete oscillator choices.</p>
 
         <h3>What did we learn?</h3>
 
