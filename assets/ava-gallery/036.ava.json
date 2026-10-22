@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Glassy pad",
+  "description": "a smooth glassy pad that fades away gently, lingering and slowly fading",
+  "preview_midi": 45.02580172581516,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.2313474416732788,
+    "mix": 0.5029889941215515,
+    "attack": 0.6112256050109863,
+    "decay": 0.9659810066223145,
+    "sustain": 0.08040189743041992,
+    "release": 0.9647753834724426,
+    "cutoff_octaves": 0.8828303217887878,
+    "q": 6.174627196742222e-05,
+    "lfo_rate": 0.10448923707008362,
+    "lfo_depth": 0.12636588513851166,
+    "detune_cents": 0.0432102270424366,
+    "noise_mix": 0.0035746984649449587,
+    "drive": 0.22895127534866333
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Steel strings",
+  "description": "a metallic steel-string guitar with a crisp fading ring, gently swelling",
+  "preview_midi": 44.06615341847445,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.19086851179599762,
+    "mix": 0.5162485837936401,
+    "attack": 0.06046222150325775,
+    "decay": 0.9643246531486511,
+    "sustain": 0.02974535897374153,
+    "release": 0.9633222222328186,
+    "cutoff_octaves": 0.7800284624099731,
+    "q": 8.360655192518607e-05,
+    "lfo_rate": 0.09097748249769211,
+    "lfo_depth": 0.11628928035497665,
+    "detune_cents": 0.053158629685640335,
+    "noise_mix": 0.01342111174017191,
+    "drive": 0.6248295307159424
+  }
+}

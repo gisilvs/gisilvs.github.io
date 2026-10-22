@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Distorted electric bass",
+  "description": "a gritty distorted electric bass with a punchy bite, gently swelling",
+  "preview_midi": 50.05191391417185,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.2626658082008362,
+    "mix": 0.3487805128097534,
+    "attack": 0.8011365532875061,
+    "decay": 0.9393357038497925,
+    "sustain": 0.018167544156312943,
+    "release": 0.9842442274093628,
+    "cutoff_octaves": 0.9598889946937561,
+    "q": 1.9171104213455692e-05,
+    "lfo_rate": 0.0651618018746376,
+    "lfo_depth": 0.8775526881217957,
+    "detune_cents": 0.02507176250219345,
+    "noise_mix": 0.012191037647426128,
+    "drive": 0.28040269017219543
+  }
+}

@@ -1,0 +1,114 @@
+/* Listening gallery. The article stays light; the instrument echoes the plugin. */
+.listening-section h3 { margin: 36px 0 18px; font: normal 25px/1.4 Georgia, serif; }
+.instrument-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0; }
+.instrument-tabs button, .sound-card-footer button {
+  padding: 8px 15px; border: 1px solid var(--line); border-radius: 20px;
+  background: transparent; color: var(--ink); font: inherit; font-size: 14px; cursor: pointer;
+}
+.instrument-tabs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: white; }
+.instrument-tabs button:hover { border-color: var(--accent); }
+.sound-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 24px 0 32px; }
+.sound-card { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: #ffffff70; }
+.sound-card-heading { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.sound-card h4 { margin: 0; font-size: 17px; line-height: 1.4; font-weight: 600; }
+.note-badge { color: var(--muted); white-space: nowrap; font: 12px/2 monospace; }
+.sound-card .sound-prompt { min-height: 76px; margin: 12px 0 18px; font-size: 14px; line-height: 1.6; }
+.sound-player { margin: 12px 0; }
+.sound-player p { margin: 0 0 5px; font-size: 12px; color: var(--muted); }
+.sound-player audio { display: block; width: 100%; height: 38px; }
+.full-prompt { margin-top: 14px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.full-prompt summary { cursor: pointer; }
+.full-prompt p { margin: 8px 0 0; }
+.sound-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+.sound-card-footer button { background: var(--accent); color: white; border-color: var(--accent); border-radius: 6px; padding: 7px 12px; font-size: 13px; }
+.sound-card-footer a { font-size: 12px; }
+.listening-section .gallery-note { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.listening-section button:focus-visible, .listening-section select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* No models run here: an AudioWorklet hosts the shared C++ DSP as WebAssembly. */
+.browser-synth {
+  --mint: #9ce1c6; --orange: #edb579; --panel: #1b2b31; --edge: #2c4148;
+  --soft: #a3b8bf; --text: #f1f0e9;
+  margin: 28px -12px; padding: 20px; border-radius: 14px; background: #0f1a1f;
+  color: var(--text); color-scheme: dark; font-size: 13px; line-height: 1.5;
+  scroll-margin-top: 20px;
+}
+.demo-header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.demo-brand { margin-right: auto; }
+.demo-brand strong { display: block; font-size: 32px; line-height: 1.1; letter-spacing: -1px; }
+.demo-brand strong span { color: var(--mint); }
+.demo-brand small { color: var(--soft); font-size: 9px; letter-spacing: 1px; }
+.browser-synth button, .browser-synth select, .browser-synth input, .browser-synth textarea { font: inherit; }
+.browser-synth button { padding: 8px 12px; border: 1px solid var(--edge); border-radius: 5px; background: #2b3c43; color: var(--text); cursor: pointer; }
+.browser-synth button:hover:not(:disabled) { border-color: var(--mint); }
+.browser-synth button.primary { background: var(--mint); border-color: var(--mint); color: #102b25; font-weight: 600; }
+.browser-synth button:disabled { opacity: .45; cursor: default; }
+.browser-synth select, .browser-synth textarea, .browser-synth .readonly-field {
+  width: 100%; border: 1px solid var(--edge); border-radius: 4px; padding: 7px 8px;
+  background: #0f1a1f; color: var(--text); min-width: 0;
+}
+.demo-preset-label { flex: 1; max-width: 230px; min-width: 150px; }
+.demo-preset-label > span, .demo-prompt label > span, .demo-oscillators label > span { display: block; margin-bottom: 5px; color: var(--soft); font-size: 10px; }
+.demo-prompt { display: grid; grid-template-columns: 95px minmax(0, 1fr) auto; gap: 12px; align-items: end; padding: 14px; margin-bottom: 12px; background: var(--panel); border-radius: 9px; }
+.demo-prompt textarea { display: block; height: 58px; resize: none; font-size: 12px; line-height: 1.5; }
+.demo-prompt button { margin-bottom: 1px; }
+.demo-sections { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; }
+.demo-panel { padding: 14px 10px; border: 1px solid var(--edge); border-radius: 10px; background: var(--panel); min-width: 0; }
+.demo-panel h4 { margin: 0 0 14px; color: var(--soft); font-size: 10px; font-weight: 600; letter-spacing: .4px; }
+.demo-oscillators { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 5px; margin-bottom: 16px; }
+.demo-knobs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 4px; }
+.motion-panel .demo-knobs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.output-panel .demo-knobs { grid-template-columns: 1fr; }
+.synth-control { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; color: var(--soft); font-size: 10px; gap: 7px; }
+.demo-knob {
+  --sweep: 135deg; --rotation: 0deg; --knob-color: var(--mint);
+  position: relative; display: block; width: 54px; height: 54px; border-radius: 50%;
+  background: radial-gradient(circle closest-side, #293d44 81%, transparent 84%),
+    conic-gradient(from 225deg, var(--knob-color) 0deg var(--sweep), #40545b var(--sweep) 270deg, transparent 270deg);
+  box-shadow: inset 0 0 0 5px #12232a55;
+}
+.demo-knob::after { content: ''; position: absolute; left: 26px; top: 9px; width: 2px; height: 9px; border-radius: 1px; background: var(--text); transform-origin: 1px 18px; transform: rotate(var(--rotation)); }
+.envelope-panel .demo-knob { --knob-color: var(--orange); }
+.synth-control input { position: absolute; left: 0; top: 18px; width: 100%; height: 58px; opacity: 0; cursor: ns-resize; touch-action: none; }
+.synth-control input:disabled { cursor: default; }
+.synth-control:focus-within .demo-knob { outline: 2px solid var(--mint); outline-offset: 3px; }
+.synth-control output { color: var(--text); font: 10px/1.5 monospace; white-space: nowrap; }
+.demo-output { display: flex; gap: 12px; align-items: center; justify-content: center; }
+.demo-meter { position: relative; width: 8px; height: 66px; border-radius: 3px; background: #0f1a1f; overflow: hidden; }
+.demo-meter::after { content: ''; position: absolute; bottom: 0; width: 100%; height: var(--level, 0%); background: var(--mint); transition: height .08s linear; }
+.demo-volume { display: block; margin-top: 15px; color: var(--soft); font-size: 10px; }
+.demo-volume input { width: 100%; accent-color: var(--mint); vertical-align: middle; }
+.demo-transport { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin: 14px 0 10px; }
+.demo-transport span { margin-right: auto; color: var(--soft); font-size: 11px; }
+.demo-keyboard { position: relative; height: 105px; margin-bottom: 12px; touch-action: none; }
+.browser-synth .demo-key { position: absolute; top: 0; padding: 0; border-radius: 0 0 3px 3px; cursor: pointer; touch-action: none; }
+.browser-synth .demo-key.white { width: calc(100% / 15); height: 100%; background: #efeee7; border: 1px solid #7d8987; color: #52615f; z-index: 1; }
+.browser-synth .demo-key.black { width: calc(64% / 15); height: 64%; background: #26353a; border: 1px solid #0a1519; color: #b2c4c9; z-index: 2; }
+.demo-key span { position: absolute; bottom: 6px; left: 0; right: 0; font: 9px/1 monospace; text-align: center; }
+.browser-synth .demo-key.pressed { background: var(--mint); color: #122a22; }
+.browser-synth .demo-key:disabled { opacity: .7; }
+.browser-synth #demo-status { margin: 10px 0 0; min-height: 20px; color: var(--mint); font-size: 11px; }
+.demo-footer { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 10px; color: var(--soft); }
+.browser-synth .demo-footer a { color: var(--mint); }
+.browser-synth [hidden] { display: none; }
+
+@media (max-width: 600px) {
+  .sound-gallery { grid-template-columns: 1fr; }
+  .sound-card .sound-prompt { min-height: 0; }
+  .browser-synth { margin: 24px -8px; padding: 12px; }
+  .demo-sections { grid-template-columns: 1fr; }
+  .motion-panel .demo-knobs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .demo-prompt { grid-template-columns: 85px 1fr; gap: 10px; }
+  .demo-prompt button { grid-column: 1 / -1; }
+  .demo-header { gap: 8px; }
+  .demo-preset-label { max-width: none; }
+  .demo-header > button { font-size: 12px; padding: 7px; }
+  .demo-knob { width: 50px; height: 50px; }
+  .demo-knob::after { left: 24px; top: 8px; transform-origin: 1px 17px; }
+  .demo-prompt textarea { height: 72px; }
+  .output-panel .demo-output { justify-content: flex-start; padding-left: 15px; }
+  .output-panel .demo-volume { max-width: 200px; }
+  .demo-keyboard { height: 90px; }
+  .demo-key span { font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .demo-meter::after { transition: none; } }

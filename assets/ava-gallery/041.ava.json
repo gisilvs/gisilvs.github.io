@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Mellow upright",
+  "description": "a dark mellow upright piano with a woody fading ring, hollow and woody",
+  "preview_midi": 58.05966006059691,
+  "oscillator": 2,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.2105974704027176,
+    "mix": 0.5357866287231445,
+    "attack": 0.2422463744878769,
+    "decay": 0.9657618999481201,
+    "sustain": 0.014580728486180305,
+    "release": 0.9726367592811584,
+    "cutoff_octaves": 0.5180434584617615,
+    "q": 0.5816799998283386,
+    "lfo_rate": 0.08270233124494553,
+    "lfo_depth": 0.025747327134013176,
+    "detune_cents": 0.006947814021259546,
+    "noise_mix": 0.3602660000324249,
+    "drive": 0.10640507191419601
+  }
+}

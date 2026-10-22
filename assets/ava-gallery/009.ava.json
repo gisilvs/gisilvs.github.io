@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Cello-like swell",
+  "description": "a warm bowed cello-like tone that gently swells, metallic and ringing",
+  "preview_midi": 65.06516782790067,
+  "oscillator": 3,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.1377107948064804,
+    "mix": 0.2810113728046417,
+    "attack": 0.9027794599533081,
+    "decay": 0.9722520112991333,
+    "sustain": 0.055941544473171234,
+    "release": 0.944751501083374,
+    "cutoff_octaves": 0.7847662568092346,
+    "q": 0.003731441916897893,
+    "lfo_rate": 0.10560676455497742,
+    "lfo_depth": 0.08179648965597153,
+    "detune_cents": 0.001383626600727439,
+    "noise_mix": 0.10685931891202927,
+    "drive": 0.06254670023918152
+  }
+}

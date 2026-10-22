@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Concert flute",
+  "description": "a clear bright concert flute with a smooth flowing tone, gently wavering",
+  "preview_midi": 67.998430945286,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.08169442415237427,
+    "mix": 0.5283491611480713,
+    "attack": 0.6425336003303528,
+    "decay": 0.954444169998169,
+    "sustain": 0.12883123755455017,
+    "release": 0.9814378023147583,
+    "cutoff_octaves": 0.6416090130805969,
+    "q": 0.003276323899626732,
+    "lfo_rate": 0.07740946859121323,
+    "lfo_depth": 0.055516939610242844,
+    "detune_cents": 0.005760254338383675,
+    "noise_mix": 0.1639132797718048,
+    "drive": 0.20026643574237823
+  }
+}

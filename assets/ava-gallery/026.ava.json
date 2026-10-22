@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Felt piano",
+  "description": "a soft felt piano with a delicate fading tone, metallic and ringing",
+  "preview_midi": 49.05238830212983,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.18708623945713043,
+    "mix": 0.5047370195388794,
+    "attack": 0.11654529720544815,
+    "decay": 0.9732060432434082,
+    "sustain": 0.019107026979327202,
+    "release": 0.9703210592269897,
+    "cutoff_octaves": 0.521436333656311,
+    "q": 0.009091551415622234,
+    "lfo_rate": 0.10064994543790817,
+    "lfo_depth": 0.04831475391983986,
+    "detune_cents": 0.031198913231492043,
+    "noise_mix": 0.11173197627067566,
+    "drive": 0.17786231637001038
+  }
+}

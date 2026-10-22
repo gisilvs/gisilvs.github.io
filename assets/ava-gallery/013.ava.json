@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Bamboo flute",
+  "description": "a woody East Asian bamboo flute with an airy breathy edge, airy and breathy",
+  "preview_midi": 76.16494117893258,
+  "oscillator": 2,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.08680051565170288,
+    "mix": 0.4956747889518738,
+    "attack": 0.9343114495277405,
+    "decay": 0.9231077432632446,
+    "sustain": 0.7567224502563477,
+    "release": 0.9443809986114502,
+    "cutoff_octaves": 0.8949986696243286,
+    "q": 0.0012273233151063323,
+    "lfo_rate": 0.0977751612663269,
+    "lfo_depth": 0.29054293036460876,
+    "detune_cents": 0.0026656039990484715,
+    "noise_mix": 0.12934757769107819,
+    "drive": 0.13691745698451996
+  }
+}

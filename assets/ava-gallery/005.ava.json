@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Muted trumpet",
+  "description": "a dark mellow muted trumpet, thin and delicate",
+  "preview_midi": 58.03186321498537,
+  "oscillator": 2,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.048530176281929016,
+    "mix": 0.46022406220436096,
+    "attack": 0.8405437469482422,
+    "decay": 0.9809331893920898,
+    "sustain": 0.29542288184165955,
+    "release": 0.9479262828826904,
+    "cutoff_octaves": 0.6662613749504089,
+    "q": 0.7780563831329346,
+    "lfo_rate": 0.6816679239273071,
+    "lfo_depth": 0.007890356704592705,
+    "detune_cents": 0.0020694832783192396,
+    "noise_mix": 0.14582999050617218,
+    "drive": 0.010306864976882935
+  }
+}

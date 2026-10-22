@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Supersaw party lead",
+  "description": "a bright supersaw party lead with a thick buzzy sound, soft and slightly dusty",
+  "preview_midi": 53.057128233557535,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.17543917894363403,
+    "mix": 0.23831048607826233,
+    "attack": 0.3978113532066345,
+    "decay": 0.9783806204795837,
+    "sustain": 0.23817166686058044,
+    "release": 0.9589998722076416,
+    "cutoff_octaves": 0.9939059615135193,
+    "q": 0.00014762308273930103,
+    "lfo_rate": 0.09564937651157379,
+    "lfo_depth": 0.3832169473171234,
+    "detune_cents": 0.0019126092083752155,
+    "noise_mix": 0.02943836711347103,
+    "drive": 0.06420046091079712
+  }
+}

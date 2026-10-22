@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Bell-like electric piano",
+  "description": "a bright glassy electric piano with a bell-like ring",
+  "preview_midi": 62.06282160188594,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.30007627606391907,
+    "mix": 0.48439598083496094,
+    "attack": 0.1286691427230835,
+    "decay": 0.968228280544281,
+    "sustain": 0.01184428296983242,
+    "release": 0.9831127524375916,
+    "cutoff_octaves": 0.5664584636688232,
+    "q": 0.0014652370009571314,
+    "lfo_rate": 0.07299958169460297,
+    "lfo_depth": 0.059832457453012466,
+    "detune_cents": 0.0144853126257658,
+    "noise_mix": 0.08976216614246368,
+    "drive": 0.04429800435900688
+  }
+}

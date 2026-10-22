@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Lo-fi piano",
+  "description": "a warm lo-fi piano with a soft muted touch, gently swelling",
+  "preview_midi": 75.06463188190229,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.2494880110025406,
+    "mix": 0.4938477873802185,
+    "attack": 0.11476129293441772,
+    "decay": 0.9676451683044434,
+    "sustain": 0.018948718905448914,
+    "release": 0.9781591892242432,
+    "cutoff_octaves": 0.6010130643844604,
+    "q": 0.0022606172133237123,
+    "lfo_rate": 0.08629027009010315,
+    "lfo_depth": 0.044013071805238724,
+    "detune_cents": 0.008167508989572525,
+    "noise_mix": 0.07872269302606583,
+    "drive": 0.03626419976353645
+  }
+}

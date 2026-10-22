@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Dark hollow pad",
+  "description": "a dark hollow pad with a soft lingering tone, thin and delicate",
+  "preview_midi": 36.9683198057071,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.2554323077201843,
+    "mix": 0.5304809212684631,
+    "attack": 0.7221643328666687,
+    "decay": 0.9797720909118652,
+    "sustain": 0.08943980187177658,
+    "release": 0.964079737663269,
+    "cutoff_octaves": 0.9540210366249084,
+    "q": 2.4814458811306395e-05,
+    "lfo_rate": 0.10800659656524658,
+    "lfo_depth": 0.09872077405452728,
+    "detune_cents": 0.06448177993297577,
+    "noise_mix": 0.0011599212884902954,
+    "drive": 0.21329328417778015
+  }
+}

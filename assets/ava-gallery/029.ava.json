@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Warm flugelhorn",
+  "description": "a warm flugelhorn-like tone with a gentle swell, warm and fuzzy",
+  "preview_midi": 58.05468181625302,
+  "oscillator": 2,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.07837016135454178,
+    "mix": 0.5438823699951172,
+    "attack": 0.9171823859214783,
+    "decay": 0.9816917181015015,
+    "sustain": 0.1672469675540924,
+    "release": 0.9583977460861206,
+    "cutoff_octaves": 0.5436437726020813,
+    "q": 0.24934425950050354,
+    "lfo_rate": 0.09416086226701736,
+    "lfo_depth": 0.013828898780047894,
+    "detune_cents": 0.00606992281973362,
+    "noise_mix": 0.20932620763778687,
+    "drive": 0.17288103699684143
+  }
+}

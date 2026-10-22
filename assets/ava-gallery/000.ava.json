@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Fuzzy garage guitar",
+  "description": "a fuzzy garage guitar with a thick buzzing tone, hollow and woody",
+  "preview_midi": 63.05217920288333,
+  "oscillator": 2,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.22628547251224518,
+    "mix": 0.5359717011451721,
+    "attack": 0.6309762001037598,
+    "decay": 0.9695020914077759,
+    "sustain": 0.024821555241942406,
+    "release": 0.9745240211486816,
+    "cutoff_octaves": 0.4967651069164276,
+    "q": 0.1779046505689621,
+    "lfo_rate": 0.08376433700323105,
+    "lfo_depth": 0.044357676059007645,
+    "detune_cents": 0.007026525214314461,
+    "noise_mix": 0.21805442869663239,
+    "drive": 0.07573742419481277
+  }
+}

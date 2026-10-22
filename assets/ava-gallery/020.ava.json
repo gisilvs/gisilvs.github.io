@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Dark wooden flute",
+  "description": "a soft dark wooden flute with a soft rounded sound, short and muted",
+  "preview_midi": 71.04648439872273,
+  "oscillator": 2,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.11149866133928299,
+    "mix": 0.4613957703113556,
+    "attack": 0.9525160789489746,
+    "decay": 0.9096656441688538,
+    "sustain": 0.9705477356910706,
+    "release": 0.9380638599395752,
+    "cutoff_octaves": 0.7011739015579224,
+    "q": 0.009533168748021126,
+    "lfo_rate": 0.11136893928050995,
+    "lfo_depth": 0.10829642415046692,
+    "detune_cents": 0.002184296492487192,
+    "noise_mix": 0.131890207529068,
+    "drive": 0.03662174195051193
+  }
+}

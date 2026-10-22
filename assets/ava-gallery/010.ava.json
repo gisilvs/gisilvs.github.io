@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Grainy lo-fi pad",
+  "description": "a grainy lo-fi pad with a muted buzzing texture, dark and mellow",
+  "preview_midi": 50.059662791215985,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.10265946388244629,
+    "mix": 0.5022106766700745,
+    "attack": 0.8949362635612488,
+    "decay": 0.9631473422050476,
+    "sustain": 0.4419776201248169,
+    "release": 0.9606720805168152,
+    "cutoff_octaves": 0.9891214966773987,
+    "q": 6.761979420844e-06,
+    "lfo_rate": 0.10978464782238007,
+    "lfo_depth": 0.6200430989265442,
+    "detune_cents": 0.03794529289007187,
+    "noise_mix": 0.0018144811037927866,
+    "drive": 0.17894017696380615
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Bright brass",
+  "description": "a bright brassy trumpet with a sharp punchy bite, gently swelling",
+  "preview_midi": 75.06566553562226,
+  "oscillator": 2,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.15801793336868286,
+    "mix": 0.5821455717086792,
+    "attack": 0.853013813495636,
+    "decay": 0.9715855121612549,
+    "sustain": 0.6871076822280884,
+    "release": 0.9260293245315552,
+    "cutoff_octaves": 0.6782499551773071,
+    "q": 0.6924455761909485,
+    "lfo_rate": 0.7945141792297363,
+    "lfo_depth": 0.06789796054363251,
+    "detune_cents": 0.0037032361142337322,
+    "noise_mix": 0.12815266847610474,
+    "drive": 0.11562942713499069
+  }
+}

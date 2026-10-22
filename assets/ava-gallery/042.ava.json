@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Whistle lead",
+  "description": "a smooth rounded sine-like whistle lead, bright and crisp",
+  "preview_midi": 73.06099838902034,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.4257029592990875,
+    "mix": 0.4396257996559143,
+    "attack": 0.10744331032037735,
+    "decay": 0.9793274998664856,
+    "sustain": 0.021499017253518105,
+    "release": 0.9767667055130005,
+    "cutoff_octaves": 0.5918177366256714,
+    "q": 0.01002015732228756,
+    "lfo_rate": 0.07573550939559937,
+    "lfo_depth": 0.011969954706728458,
+    "detune_cents": 0.00745736388489604,
+    "noise_mix": 0.06804680079221725,
+    "drive": 0.02460515685379505
+  }
+}

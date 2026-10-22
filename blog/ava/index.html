@@ -11,6 +11,8 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
   <script defer src="deep-dive.js"></script>
   <script defer src="pretraining-plots.js"></script>
+  <link rel="stylesheet" href="listening.css?v=1">
+  <script type="module" src="listening.js?v=1"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -863,6 +865,79 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
         </div>
 
         <p>Overall, I think the fit is decent. The reconstructions don't capture every detail, but they often get close enough to give us something useful to play and tweak. Some of the remaining differences likely come from Ava's limited range of sounds, and some from the difficulty of training through the synth: even when a closer match is possible, finding it isn't always easy.</p>
+      </section>
+      <section class="article-section listening-section" aria-labelledby="lets-have-a-listen">
+        <h2 id="lets-have-a-listen">10. Results: Let's Have a Listen!</h2>
+
+        <p>Enough about losses. Pick an instrument and have a listen: each description comes with the text-generated reference and Ava's attempt to recreate it. All the Ava clips below use the best network trained from scratch.</p>
+
+        <div id="instrument-tabs" class="instrument-tabs" role="group" aria-label="Choose an instrument family"></div>
+        <p id="gallery-loading" role="status">Loading the sounds…</p>
+        <div id="sound-gallery" class="sound-gallery" aria-label="Sound examples"></div>
+        <noscript><p>Enable JavaScript to browse the gallery and play the synth. The audio comparisons in the previous section work without it.</p></noscript>
+        <p class="gallery-note">These are held-out test examples, chosen for variety rather than ranked by reconstruction quality. References were decoded from their saved latents; the clips haven't been loudness-matched. Each preset is also downloadable for the plugin.</p>
+
+        <h3>Where things go off track</h3>
+
+        <p>Some of the references don't sound much like their descriptions. That goes wrong before Ava even gets involved: better prompts and more reliable text-conditioned generation would already improve the whole pipeline.</p>
+
+        <p>When the reference is convincing but Ava misses it, there are two other obstacles: the synth can't make every sound, and training doesn't always find the best preset it could make. These examples help us hear where each part of the pipeline needs work.</p>
+
+        <h3>Play and tweak the presets</h3>
+
+        <p>The fun part is that these aren't just audio samples. Load a preset from the gallery, play it at another pitch, or turn a few knobs and take it somewhere else.</p>
+
+        <p>This browser demo uses Ava's C++ synthesis engine, compiled to WebAssembly. <strong>Text generation is disabled here</strong>; it loads the precomputed example presets. In the desktop plugin, the Generate button lets you create new presets from your own descriptions.</p>
+
+        <div class="browser-synth" id="browser-synth" role="region" aria-label="Interactive Ava synthesizer">
+          <div class="demo-header">
+            <div class="demo-brand"><strong>Ava<span>.</span></strong><small>TEXT TO SYNTH</small></div>
+            <label class="demo-preset-label"><span>PRESET</span><select id="demo-preset" aria-label="Load an example preset"></select></label>
+            <button type="button" id="demo-reset">Reset knobs</button>
+            <button type="button" id="demo-preview" class="primary">Preview note</button>
+            <button type="button" id="demo-stop">Stop</button>
+          </div>
+
+          <div class="demo-prompt">
+            <label><span>INSTRUMENT</span><input class="readonly-field" id="demo-instrument" readonly aria-label="Preset instrument"></label>
+            <label><span>DESIRED SOUND</span><textarea id="demo-description" readonly aria-label="Preset text description"></textarea></label>
+            <button type="button" disabled title="Text generation is enabled in the desktop plugin">Generate</button>
+          </div>
+
+          <div class="demo-sections">
+            <div class="demo-panel source-panel">
+              <h4>01 &nbsp; SOURCE</h4>
+              <div class="demo-oscillators">
+                <label><span>OSCILLATOR A</span><select id="demo-wave-a" disabled aria-label="Oscillator A waveform"></select></label>
+                <label><span>OSCILLATOR B</span><select id="demo-wave-b" disabled aria-label="Oscillator B waveform"></select></label>
+              </div>
+              <div class="demo-knobs" data-controls="mix detune_cents noise_mix drive"></div>
+            </div>
+            <div class="demo-panel motion-panel">
+              <h4>02 &nbsp; FILTER + MOTION</h4>
+              <div class="demo-knobs" data-controls="cutoff_octaves q lfo_rate lfo_depth"></div>
+            </div>
+            <div class="demo-panel envelope-panel">
+              <h4>03 &nbsp; AMPLITUDE ENVELOPE</h4>
+              <div class="demo-knobs" data-controls="attack decay sustain release"></div>
+            </div>
+            <div class="demo-panel output-panel">
+              <h4>04 &nbsp; OUTPUT</h4>
+              <div class="demo-output"><div class="demo-knobs" data-controls="gain"></div><div class="demo-meter" id="demo-meter" aria-hidden="true"></div></div>
+              <label class="demo-volume">Listening volume<input id="demo-volume" type="range" min="0" max="0.8" step="0.01" value="0.4" aria-label="Browser listening volume"></label>
+            </div>
+          </div>
+
+          <div class="demo-transport">
+            <button type="button" id="demo-enable" class="primary">Enable audio</button>
+            <span>Drag knobs up/down · double-click to restore</span>
+            <button type="button" id="demo-octave-down" aria-label="Keyboard one octave lower">− octave</button>
+            <button type="button" id="demo-octave-up" aria-label="Keyboard one octave higher">+ octave</button>
+          </div>
+          <div class="demo-keyboard" id="demo-keyboard" role="group" aria-label="Playable piano keyboard"></div>
+          <p id="demo-status" role="status" aria-live="polite">Loading the presets…</p>
+          <div class="demo-footer"><span><span id="demo-register"></span> · 8 voices · output limiter</span><a id="demo-download" download>↓ Download preset</a></div>
+        </div>
       </section>
       <section class="article-section references-section" aria-labelledby="references">
         <h2 id="references">References</h2>

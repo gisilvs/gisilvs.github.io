@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Nylon strings",
+  "description": "a warm nylon-string guitar with a gentle woody pluck, smooth and rounded",
+  "preview_midi": 62.06097873357773,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.2615928649902344,
+    "mix": 0.5108987092971802,
+    "attack": 0.11111365258693695,
+    "decay": 0.9714481234550476,
+    "sustain": 0.01674431934952736,
+    "release": 0.9666755199432373,
+    "cutoff_octaves": 0.5057713389396667,
+    "q": 0.015450512990355492,
+    "lfo_rate": 0.10164903849363327,
+    "lfo_depth": 0.0881941094994545,
+    "detune_cents": 0.010949146002531052,
+    "noise_mix": 0.16258016228675842,
+    "drive": 0.05955908074975014
+  }
+}

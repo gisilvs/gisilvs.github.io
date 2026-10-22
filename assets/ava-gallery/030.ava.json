@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Soft jazz trumpet",
+  "description": "a breathy soft jazz trumpet with a soft rounded sound, gently wavering",
+  "preview_midi": 55.00810450681454,
+  "oscillator": 2,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.13070207834243774,
+    "mix": 0.40029141306877136,
+    "attack": 0.8442752361297607,
+    "decay": 0.979282021522522,
+    "sustain": 0.0334562249481678,
+    "release": 0.9561230540275574,
+    "cutoff_octaves": 0.6610137224197388,
+    "q": 0.5821390151977539,
+    "lfo_rate": 0.5120745897293091,
+    "lfo_depth": 0.014710888266563416,
+    "detune_cents": 0.002602593507617712,
+    "noise_mix": 0.13268016278743744,
+    "drive": 0.0208982452750206
+  }
+}

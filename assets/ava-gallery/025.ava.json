@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Wiry violin",
+  "description": "a bright wiry violin-like tone with a rough bowed edge, gently wavering",
+  "preview_midi": 70.0561527331476,
+  "oscillator": 3,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.05460290610790253,
+    "mix": 0.36414921283721924,
+    "attack": 0.885706901550293,
+    "decay": 0.9823586344718933,
+    "sustain": 0.154277503490448,
+    "release": 0.9560487866401672,
+    "cutoff_octaves": 0.8168410658836365,
+    "q": 0.002121160738170147,
+    "lfo_rate": 0.0988362729549408,
+    "lfo_depth": 0.05090989172458649,
+    "detune_cents": 0.0021471697837114334,
+    "noise_mix": 0.14614225924015045,
+    "drive": 0.33148109912872314
+  }
+}

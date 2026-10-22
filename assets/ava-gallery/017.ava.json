@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Rave lead",
+  "description": "a gritty distorted rave lead with a sharp biting sound, warm and fuzzy",
+  "preview_midi": 60.05711265225992,
+  "oscillator": 0,
+  "oscillator_b": 2,
+  "controls": {
+    "gain": 0.3432765305042267,
+    "mix": 0.29179510474205017,
+    "attack": 0.7909688949584961,
+    "decay": 0.9756195545196533,
+    "sustain": 0.007702350150793791,
+    "release": 0.9624317288398743,
+    "cutoff_octaves": 0.9912694692611694,
+    "q": 0.0004886643728241324,
+    "lfo_rate": 0.08803269267082214,
+    "lfo_depth": 0.6671882271766663,
+    "detune_cents": 0.001290321466512978,
+    "noise_mix": 0.09038136154413223,
+    "drive": 0.08106544613838196
+  }
+}

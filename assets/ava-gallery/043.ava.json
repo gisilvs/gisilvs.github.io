@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Clean sub bass",
+  "description": "a deep clean sub bass with very little brightness",
+  "preview_midi": 34.05978881851759,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.4654490649700165,
+    "mix": 0.47915688157081604,
+    "attack": 0.1233108788728714,
+    "decay": 0.9765923619270325,
+    "sustain": 0.0566830113530159,
+    "release": 0.9836475253105164,
+    "cutoff_octaves": 0.9775208830833435,
+    "q": 3.0710336432093754e-05,
+    "lfo_rate": 0.0839017853140831,
+    "lfo_depth": 0.11097897589206696,
+    "detune_cents": 0.07675950974225998,
+    "noise_mix": 0.0009178196196444333,
+    "drive": 0.06743427366018295
+  }
+}

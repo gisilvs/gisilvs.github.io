@@ -1,0 +1,27 @@
+{
+  "format": "ava-preset",
+  "version": 1,
+  "synth_version": "noise-distortion-1",
+  "control_mapping": "synth_v1",
+  "sample_rate": 24000,
+  "name": "Warm analog bass",
+  "description": "a warm rounded analog bass with a soft edge, airy and breathy",
+  "preview_midi": 45.06292496393892,
+  "oscillator": 0,
+  "oscillator_b": 0,
+  "controls": {
+    "gain": 0.22763879597187042,
+    "mix": 0.5150970816612244,
+    "attack": 0.0071015069261193275,
+    "decay": 0.9754394888877869,
+    "sustain": 0.1106129139661789,
+    "release": 0.963043749332428,
+    "cutoff_octaves": 0.8134012818336487,
+    "q": 7.898506737546995e-05,
+    "lfo_rate": 0.10969056934118271,
+    "lfo_depth": 0.04137329384684563,
+    "detune_cents": 0.041447293013334274,
+    "noise_mix": 0.00427046837285161,
+    "drive": 0.22311899065971375
+  }
+}
