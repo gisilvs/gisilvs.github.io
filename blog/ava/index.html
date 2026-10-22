@@ -664,11 +664,11 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
       <section class="article-section learning-section" aria-labelledby="audio-reconstruction-loss">
         <h2 id="audio-reconstruction-loss">7. Can We Recover the Parameters with an Audio Reconstruction Loss?</h2>
 
-        <p>Parameter supervision gave us a useful starting point. Now we pass the network's predicted presets through the synth and compare the rendered audio with the target. This also lets us learn from sounds whose original synthesizer settings we don't know.</p>
-
-        <p>As we saw earlier, waveform MSE is sensitive to phase and alignment. For arbitrary recordings, a spectral comparison is a more useful starting point.</p>
+        <p>The parameter-supervised experiment gives us confidence that the latents contain most of the information we need. Training with an audio loss is much more expensive, but it lets us learn from recordings without preset labels, provided the synth is flexible enough to reproduce their sounds.</p>
 
         <h3>Moving to a spectral loss</h3>
+
+        <p>As we saw earlier, waveform MSE is sensitive to phase and alignment. For arbitrary recordings, a spectral comparison is a more useful starting point.</p>
 
         <p>The <strong>short-time Fourier transform (STFT)</strong> splits a waveform into overlapping windows and measures the frequency content in each. Comparing their magnitudes makes the loss less sensitive to phase, while retaining information about how the sound changes over time.</p>
 
@@ -680,25 +680,16 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>Here, <span class="math">M_r</span> and <span class="math">\hat M_r</span> are the target and reconstructed magnitudes at resolution <span class="math">r</span>. Both terms have weight one. The logarithm gives quieter frequency components more influence; a small magnitude floor keeps it finite.</p>
 
-        <h3>Does this make recovery easier?</h3>
+        <h3>Combining STFT and log-mel</h3>
 
-        <p>I first repeated the direct preset-fitting test using seven STFT resolutions, from 32 to 2,048 samples. In one joint fit, a 2 Hz LFO was recovered at <strong>2.002 Hz with STFT, versus 1.696 Hz with MSE</strong>. But both fits pushed attack and decay close to zero, compensating with other controls. After making the oscillator choices discrete, the MSE fit actually had the lower STFT error.</p>
-
-        <p>This was one preset, and neither loss recovered all its parameters. A spectral loss changes the optimization landscape; it doesn't remove local minima or interactions between controls.</p>
-
-        <h3>The loss I kept</h3>
-
-        <p>After further tests in which the network tried to memorize 16 synthetic examples, I kept the longer-window STFT loss and added <strong>log-mel L1</strong>. This groups the magnitudes into bands spaced more finely at low frequencies, giving us another comparison of the sound's broad spectral shape.</p>
-
-        <p>The settings for mono audio at 24 kHz are:</p>
-        <ul>
-          <li><strong>STFT:</strong> window sizes doubling from 32 to 16,384 samples, with equally weighted spectral-convergence and log-magnitude L1 terms. A fixed A-weighting filter reduces emphasis on very low and high frequencies before computing the spectrograms.</li>
-          <li><strong>Log-mel:</strong> 32 bands at window sizes 256, 512, 1,024 and 2,048, using log-magnitude L1 without A-weighting.</li>
-        </ul>
-
-        <p>Both use matching FFT and window lengths, Hann windows, hops of one quarter of the window length, and an average over resolutions. The two losses are added with equal weight:</p>
+        <p>After testing several losses on a small synthetic subset, I settled on a multi-resolution STFT loss with longer windows, combined with <strong>log-mel L1</strong>. The longer windows help distinguish close frequencies, while log-mel groups frequencies into bands to compare the sound's broader tonal shape. The two losses are added with equal weight:</p>
 
         <div class="math display-math">\mathcal{L}_{\mathrm{audio}}=\mathcal{L}_{\mathrm{STFT}}+\mathcal{L}_{\mathrm{logmel}}</div>
+
+        <figure class="pretraining-errors" id="spectral-representations" aria-labelledby="spectral-representations-caption">
+          <img src="../../assets/audio-spectral-representations.svg" width="740" height="640" loading="lazy" alt="The target C5 note and its fine-tuned reconstruction, shown as waveforms, log-STFT spectrograms and log-mel spectrograms. STFT reveals individual frequency components, while mel bands group them more broadly.">
+          <figcaption id="spectral-representations-caption">The same C5 example in three views: waveform, STFT and log-mel. Brighter colors mean larger magnitudes; each spectral row shares a color scale across target and reconstruction. One resolution is shown here; the losses combine several.</figcaption>
+        </figure>
 
         <p>These runs optimize only that audio objective. Waveform MSE and parameter errors are logged as diagnostics; there is no additional waveform, phase or parameter-supervision term.</p>
 
