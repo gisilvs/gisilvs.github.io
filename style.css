@@ -313,3 +313,9 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
   .data-step { padding: 10px; }
   .data-arrow { transform: rotate(90deg); }
 }
+
+/* Small pipeline sketches and the parameter comparison figure. */
+.data-step .pipeline-sketch { margin: 9px auto; }
+.pretraining-scatter label { font-size: 14px; }
+.pretraining-scatter select { margin: 0 0 14px 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); font: inherit; font-size: 14px; }
+.pretraining-scatter img { max-width: 480px; margin: auto; }
