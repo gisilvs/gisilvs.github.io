@@ -674,6 +674,13 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
 
         <p>Short windows locate attacks and other quick changes more precisely. Long windows distinguish nearby frequencies more clearly, which is useful for detuning. A <strong>multi-resolution STFT loss</strong> combines both views.</p>
 
+        <p>Below is a square wave and a copy shifted by a quarter-cycle. Waveform MSE penalizes this change, even though the harmonic content is the same. The short STFT window blurs the harmonic lines; the longer window makes them sharper. Log-mel groups frequencies into broader bands.</p>
+
+        <figure class="pretraining-errors" id="spectral-representations" aria-labelledby="spectral-representations-caption">
+          <img src="../../assets/square-spectral-loss.svg" width="740" height="800" loading="lazy" alt="A 500 Hz band-limited square wave and a quarter-cycle-shifted copy. Waveform samples differ, but their harmonic patterns remain similar in 128-sample and 2,048-sample STFTs and a 32-band log-mel spectrogram. Each row includes the measured distance to the reference.">
+          <figcaption id="spectral-representations-caption">The same 500 Hz square wave, shifted by 90°. Waveforms are zoomed in; spectrograms show one second. Each spectral row uses a shared color scale. The distances use different scales and aren't directly comparable; finite windows and clip boundaries keep the spectral losses from being exactly phase-invariant.</figcaption>
+        </figure>
+
         <p>I used <a href="https://github.com/csteinmetz1/auraloss">auraloss</a><sup><a href="#ref-auraloss" aria-label="Reference 5: auraloss">[5]</a></sup> to compare each pair of magnitude spectrograms in two ways: their relative difference, called <em>spectral convergence</em>, and the mean absolute difference between their log magnitudes:</p>
 
         <div class="math display-math">\mathcal{L}_{\mathrm{STFT}}=\frac{1}{R}\sum_{r=1}^{R}\left(\frac{\lVert M_r-\hat M_r\rVert_F}{\lVert M_r\rVert_F}+\operatorname{mean}\left|\log M_r-\log\hat M_r\right|\right)</div>
@@ -685,11 +692,6 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
         <p>After testing several losses on a small synthetic subset, I settled on a multi-resolution STFT loss with longer windows, combined with <strong>log-mel L1</strong>. The longer windows help distinguish close frequencies, while log-mel groups frequencies into bands to compare the sound's broader tonal shape. The two losses are added with equal weight:</p>
 
         <div class="math display-math">\mathcal{L}_{\mathrm{audio}}=\mathcal{L}_{\mathrm{STFT}}+\mathcal{L}_{\mathrm{logmel}}</div>
-
-        <figure class="pretraining-errors" id="spectral-representations" aria-labelledby="spectral-representations-caption">
-          <img src="../../assets/audio-spectral-representations.svg" width="740" height="640" loading="lazy" alt="The target C5 note and its fine-tuned reconstruction, shown as waveforms, log-STFT spectrograms and log-mel spectrograms. STFT reveals individual frequency components, while mel bands group them more broadly.">
-          <figcaption id="spectral-representations-caption">The same C5 example in three views: waveform, STFT and log-mel. Brighter colors mean larger magnitudes; each spectral row shares a color scale across target and reconstruction. One resolution is shown here; the losses combine several.</figcaption>
-        </figure>
 
         <p>These runs optimize only that audio objective. Waveform MSE and parameter errors are logged as diagnostics; there is no additional waveform, phase or parameter-supervision term.</p>
 
