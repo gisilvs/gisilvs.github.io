@@ -323,4 +323,5 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .reconstruction-audio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
 .reconstruction-audio p { margin: 0 0 8px; font-size: 14px; }
 .reconstruction-audio audio { display: block; width: 100%; }
-@media (max-width: 600px) { .reconstruction-audio { grid-template-columns: 1fr; } }
+#audio-training-previews .reconstruction-audio { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 600px) { .reconstruction-audio, #audio-training-previews .reconstruction-audio { grid-template-columns: 1fr; } }
