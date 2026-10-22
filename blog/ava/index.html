@@ -6,7 +6,7 @@
   <meta name="description" content="Building Ava, a differentiable synthesizer that turns natural language descriptions into playable presets.">
   <title>Ava: Text-to-Synth — Gianluigi Silvestri</title>
   <link rel="canonical" href="https://gisilvs.github.io/blog/ava/">
-  <link rel="stylesheet" href="../../style.css?v=four-way-audio">
+  <link rel="stylesheet" href="../../style.css?v=text-audio-finetuning">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
   <script defer src="deep-dive.js"></script>
@@ -794,6 +794,83 @@ a<span class="code-operator">,</span> b <span class="code-operator">=</span> <sp
         <p>At deployment, the C++ plugin also passes the raw latent directly to the exported mapper. <strong>Neither the audio decoder nor the pitch tracker is needed</strong>: the keyboard supplies pitch, velocity and note timing. An instrument's default pitch is included in the text prompt, but it doesn't restrict which notes the resulting preset can play.</p>
 
         <p>We now have everything needed to learn from text-generated sounds. The next question is how closely Ava can approximate them, and whether starting from parameter-supervised weights still helps.</p>
+      </section>
+      <section class="article-section" aria-labelledby="audio-space-fine-tuning">
+        <h2 id="audio-space-fine-tuning">9. Audio-Space Fine-Tuning</h2>
+
+        <p>With the generated dataset in place, I could finally train the mapper on sounds that weren't made by Ava. There are no correct preset labels to recover here: the goal is to find a good approximation within the synth's capabilities.</p>
+
+        <p>The <a href="#text-mapper-training">training loop</a> is the same as in the synthetic audio-loss experiment: predict a preset, render it through the differentiable synth, and compare the result with the target using the long-window STFT and log-mel loss.</p>
+
+        <h3>Does parameter-space pretraining help?</h3>
+
+        <p>The parameter-pretrained network already knows something about the synth controls, which seems like a useful starting point. But it learned from randomly sampled synthetic presets. The text-generated sounds are more varied, and many can't be reproduced exactly by Ava. Pretraining might help, or it might steer the model towards settings that worked better for the earlier dataset.</p>
+
+        <p>I compared two starting points:</p>
+        <ul>
+          <li><strong>Fine-tuning:</strong> start with the weights learned through direct parameter supervision.</li>
+          <li><strong>Training from scratch:</strong> start the same network with random weights.</li>
+        </ul>
+
+        <p>For each, I tried learning rates of <span class="math">10^{-3}</span> and <span class="math">10^{-4}</span>. All four runs used the same 440k-parameter Transformer, 10,000 training sounds, AdamW, batch size 128 and 200 epochs. The audio objective was unchanged: STFT plus log-mel, with equal weights and no parameter-supervision term. Each run took about <strong>5.5–6.2 hours on an A100 40 GB</strong>.</p>
+
+        <figure class="pretraining-errors" id="text-audio-training-comparison" aria-labelledby="text-audio-training-caption">
+          <img src="../../assets/text-audio-training-comparison.svg" width="740" height="440" loading="lazy" alt="Training and validation audio losses over 200 epochs for fine-tuning and training from scratch at learning rates 0.001 and 0.0001. Validation uses a logarithmic axis; the final losses are close for all four runs.">
+          <figcaption id="text-audio-training-caption">Training uses soft oscillator mixtures; validation uses discrete choices and EMA weights. Dots mark the lowest-validation-loss checkpoints. Validation axes are logarithmic.</figcaption>
+        </figure>
+
+        <p>I selected each checkpoint by validation loss, then evaluated it on the same 1,000 held-out sounds:</p>
+        <table class="experiment-results">
+          <thead><tr><th scope="col">Initialization</th><th scope="col">Learning rate</th><th scope="col">Selected epoch</th><th scope="col">Test audio loss</th></tr></thead>
+          <tbody><tr><th scope="row">Fine-tuned</th><td><span class="math">10^{-3}</span></td><td>83</td><td>1.912</td></tr><tr><th scope="row">From scratch</th><td><span class="math">10^{-3}</span></td><td>197</td><td><strong>1.888</strong></td></tr><tr><th scope="row">Fine-tuned</th><td><span class="math">10^{-4}</span></td><td>156</td><td>1.901</td></tr><tr><th scope="row">From scratch</th><td><span class="math">10^{-4}</span></td><td>198</td><td>1.918</td></tr></tbody>
+        </table>
+
+        <p>The best scratch model reached <strong>1.888</strong>, compared with <strong>1.901</strong> for the best fine-tuned model: about <strong>0.6% lower</strong>. Pretraining helped at the lower learning rate, but not at the higher one. The difference is small, and these four runs use only one seed per configuration, so I wouldn't take this as a general argument against pretraining.</p>
+
+        <h3>Listening to the results</h3>
+
+        <p>Spectral loss is useful for comparing runs, but the real question is how the presets sound. Here are four test examples, using each strategy's best validation model: fine-tuning at <span class="math">10^{-4}</span> and training from scratch at <span class="math">10^{-3}</span>. Both render discrete oscillator choices, and the clips keep their original levels.</p>
+
+        <div class="pretraining-examples" id="text-audio-previews">
+          <div class="pretraining-example">
+            <h4>Guitar · D♯4</h4>
+            <p>“a fuzzy garage guitar with a thick buzzing tone, hollow and woody.”</p>
+            <div class="reconstruction-audio">
+              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-000-target.wav" aria-label="Guitar: generated audio">Your browser does not support audio playback.</audio></div>
+              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-000-pretrained.wav" aria-label="Guitar: fine-tuned">Your browser does not support audio playback.</audio></div>
+              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-000-scratch.wav" aria-label="Guitar: from scratch">Your browser does not support audio playback.</audio></div>
+            </div>
+          </div>
+          <div class="pretraining-example">
+            <h4>Pad · C5</h4>
+            <p>“a soft organ-like pad with a steady rounded sound, warm and fuzzy.”</p>
+            <div class="reconstruction-audio">
+              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-002-target.wav" aria-label="Pad: generated audio">Your browser does not support audio playback.</audio></div>
+              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-002-pretrained.wav" aria-label="Pad: fine-tuned">Your browser does not support audio playback.</audio></div>
+              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-002-scratch.wav" aria-label="Pad: from scratch">Your browser does not support audio playback.</audio></div>
+            </div>
+          </div>
+          <div class="pretraining-example">
+            <h4>Trumpet · A♯3</h4>
+            <p>“a dark mellow muted trumpet, thin and delicate.”</p>
+            <div class="reconstruction-audio">
+              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-005-target.wav" aria-label="Trumpet: generated audio">Your browser does not support audio playback.</audio></div>
+              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-005-pretrained.wav" aria-label="Trumpet: fine-tuned">Your browser does not support audio playback.</audio></div>
+              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-005-scratch.wav" aria-label="Trumpet: from scratch">Your browser does not support audio playback.</audio></div>
+            </div>
+          </div>
+          <div class="pretraining-example">
+            <h4>Strings · E4</h4>
+            <p>“a thin nasal vintage string-synth tone.”</p>
+            <div class="reconstruction-audio">
+              <div><p>Generated audio</p><audio controls preload="metadata" src="../../assets/text-training-006-target.wav" aria-label="Strings: generated audio">Your browser does not support audio playback.</audio></div>
+              <div><p>Fine-tuned</p><audio controls preload="metadata" src="../../assets/text-training-006-pretrained.wav" aria-label="Strings: fine-tuned">Your browser does not support audio playback.</audio></div>
+              <div><p>From scratch</p><audio controls preload="metadata" src="../../assets/text-training-006-scratch.wav" aria-label="Strings: from scratch">Your browser does not support audio playback.</audio></div>
+            </div>
+          </div>
+        </div>
+
+        <p>Ava has to approximate these sounds with two oscillators and a small set of controls. Some of the target's texture, transients or movement may be out of reach. I see the result as a starting preset to play and tweak, rather than an exact recreation of every detail.</p>
       </section>
       <section class="article-section references-section" aria-labelledby="references">
         <h2 id="references">References</h2>

@@ -303,6 +303,10 @@ footer { padding: 24px 0 30px; border-top: 1px solid var(--line); color: var(--m
 .pretraining-examples { margin: 28px 0; }
 .pretraining-example { border-top: 1px solid var(--line); padding: 20px 0; }
 .pretraining-example h4 { margin: 0; font-size: 17px; font-weight: 600; }
+.experiment-results { width: 100%; margin: 18px 0 24px; border-collapse: collapse; font-size: 13px; }
+.experiment-results th, .experiment-results td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+.experiment-results th:first-child { text-align: left; }
+.experiment-results tbody th { font-weight: 500; }
 .preset-comparison { font-size: 13px; color: var(--muted); }
 .preset-comparison summary { cursor: pointer; }
 .preset-comparison table { width: 100%; margin-top: 12px; border-collapse: collapse; color: var(--ink); font-size: 13px; }
