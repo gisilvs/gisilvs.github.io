@@ -188,34 +188,38 @@
         <details class="deep-dive" id="deep-dive">
           <summary><h3 id="deep-dive-title">Deep Dive: Differentiable Synthesis in PyTorch<small>Optional · open to read</small></h3></summary>
           <div class="deep-dive-body">
-<p>The main idea behind this project is that we want to use a synthesizer as a differentiable decoder. Given a set of parameters <span class="math">\theta</span> and MIDI information <span class="math">m</span>, the synthesizer produces an audio waveform:</p>
+<p>The idea behind this project is to use a synthesizer as a differentiable decoder. Given a set of preset parameters <span class="math">\theta</span> and MIDI information <span class="math">m</span>, the synth produces a waveform:</p>
 
-<div class="math display-math">\hat{x} = S(\theta, m)</div>
+<div class="math display-math">\hat{x}=S(\theta,m)</div>
 
-<p>We can then compare this waveform with target audio and backpropagate the loss through the synthesizer. The distinction is that <span class="math">\theta</span> is an <strong>input to the synth</strong>, just like the MIDI information. The synthesizer itself is a fixed collection of signal-processing operations; it has no internal neural-network weights to learn.</p>
+<p>Here, <span class="math">\theta</span> and <span class="math">m</span> are inputs to the synth; the synthesizer itself has no trainable weights. It's a collection of signal-processing operations, but by implementing them in PyTorch, we can propagate gradients through the entire signal chain.</p>
 
-<p>For a single sound, we can make <span class="math">\theta</span> a set of learnable parameters and optimize those values directly until the rendered audio matches the target. Alternatively, we can train a neural network to predict <span class="math">\theta</span> from an audio representation. In that case, the network learns a mapping that we can reuse across many sounds, rather than solving a new optimization problem for each one.</p>
+<p>We can use these gradients to optimize the parameters of a single sound directly, or train a neural network to predict them from audio. Most synth operations are straightforward to differentiate, but some, particularly waveform selection and recursive filtering, require a bit more care.</p>
 
 <h3 id="oscillators-and-waveform-selection">Oscillators and waveform selection</h3>
 
-<p>Let&#x27;s start with the oscillators. An oscillator generates a periodic waveform at a given frequency, determined by the incoming MIDI pitch. Ava supports four waveforms: sine, triangle, square, and sawtooth.</p>
+<p>Let's start with the oscillators. Each produces a periodic waveform at a frequency determined by the MIDI pitch. Ava supports sine, triangle, square, and sawtooth waves.</p>
 
-<p>To generate audio, we evaluate a waveform at a sequence of evenly spaced times. In the equation below, <span class="math">t</span> is time in seconds since note-on, and <span class="math">f</span> is frequency in cycles per second (hertz):</p>
+<p>The simplest is a sine wave:</p>
 
-<div class="math display-math">x(t) = \sin(2\pi ft)</div>
+<div class="math display-math">x(t)=\sin(2\pi ft)</div>
 
-<p>A sample rate of 24 kHz means taking 24,000 samples per second, so adjacent times are <span class="math">1/24000</span> seconds apart. If <span class="math">f_s</span> is the sample rate and <span class="math">N</span> is the number of samples, the time vector is:</p>
+<p>where <span class="math">f</span> is the frequency in hertz and <span class="math">t</span> is time in seconds.</p>
 
-<div class="math display-math">t_n = \frac{n}{f_s}, \qquad n=0,1,\ldots,N-1</div>
+<p>To generate digital audio, we evaluate this function at discrete time steps. At a sample rate of 24 kHz, we take 24,000 samples per second, so consecutive samples are separated by <span class="math">1/24000</span> seconds.</p>
 
-<p>The synth builds that vector once for the clip. Here, <code>duration</code> is in seconds and <code>self.sample_rate</code> is the number of samples per second:</p>
+<p>For a recording containing <span class="math">N</span> samples, the time vector is:</p>
+
+<div class="math display-math">t_n=\frac{n}{f_s},\qquad n=0,1,\ldots,N-1</div>
+
+<p>where <span class="math">f_s</span> is the sample rate.</p>
 
 <p class="code-source">From <code>synth/synth.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Sample indices 0, 1, ..., N-1 become times in seconds after division.</span>
 time <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">arange</span><span class="code-operator">(</span><span class="code-function">round</span><span class="code-operator">(</span>duration <span class="code-operator">*</span> <span class="code-namespace">self</span><span class="code-operator">.</span>sample_rate<span class="code-operator">)</span><span class="code-operator">,</span>
                     device<span class="code-operator">=</span>freq<span class="code-operator">.</span>device<span class="code-operator">,</span> dtype<span class="code-operator">=</span><span class="code-namespace">torch</span><span class="code-operator">.</span>float32<span class="code-operator">)</span> <span class="code-operator">/</span> <span class="code-namespace">self</span><span class="code-operator">.</span>sample_rate</code></pre>
 
-<p>Multiplying each time by <code>freq</code> tells us how many cycles have elapsed. Multiplying again by <span class="math">2\pi</span> converts cycles to an angle in radians. Finally, sine maps that angle to an amplitude between −1 and 1. At 200 Hz and 24 kHz, this takes 120 samples per cycle.</p>
+<p>We can then generate the sine wave by evaluating the equation at every time step:</p>
 
 <p class="code-source">From <code>synth/oscillators/sine.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">__call__</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> freq<span class="code-operator">,</span> time<span class="code-operator">)</span><span class="code-operator">:</span>
@@ -224,19 +228,33 @@ time <span class="code-operator">=</span> <span class="code-namespace">torch</sp
     <span class="code-comment"># 2*pi*freq*time is the phase in radians; initial phase is zero.</span>
     <span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">sin</span><span class="code-operator">(</span><span class="code-number">2</span> <span class="code-operator">*</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>pi <span class="code-operator">*</span> freq <span class="code-operator">*</span> time<span class="code-operator">)</span>  <span class="code-comment"># [batch, samples]</span></code></pre>
 
-<p>Every batch element can therefore have its own pitch, while sharing the same sampling times. For now there is no phase-offset control: all oscillators start at phase zero.</p>
+<p>Multiplying time by frequency gives the number of completed cycles, while multiplying by <span class="math">2\pi</span> converts that into radians. At 200 Hz and 24 kHz, each cycle takes 120 samples.</p>
 
-<p>Square, triangle and sawtooth are built by adding sine waves at multiples of the fundamental frequency. These extra components are called <em>harmonics</em>. A square wave uses only odd harmonics: <span class="math">f,3f,5f,\ldots</span>, with each amplitude divided by its harmonic number:</p>
+<p>PyTorch broadcasting also lets us generate several waveforms at different frequencies in parallel, using the same time vector.</p>
 
-<div class="math display-math">x_{\mathrm{square}}(t) \approx \frac{4}{\pi}\left[\sin(2\pi ft)+\frac{\sin(2\pi 3ft)}{3}+\frac{\sin(2\pi 5ft)}{5}+\cdots\right]</div>
+<h4>Building more complex waveforms</h4>
 
-<p>We start with the fundamental sine wave. Adding a smaller sine at three times its frequency begins to flatten the top and bottom. Further odd harmonics make the transitions steeper. The second component we add is therefore the <strong>third harmonic</strong>; the second harmonic, <span class="math">2f</span>, is absent.</p>
+<p>Square, triangle, and sawtooth waves can be constructed by adding sine waves at multiples of the fundamental frequency, known as <strong>harmonics</strong>.</p>
+
+<p>For example, a square wave contains only odd harmonics, with amplitudes decreasing inversely with their harmonic number:</p>
+
+<div class="math display-math">x_{\mathrm{square}}(t)\approx\frac{4}{\pi}
+\left[
+\sin(2\pi ft)
++\frac{\sin(2\pi 3ft)}{3}
++\frac{\sin(2\pi 5ft)}{5}
++\cdots
+\right]</div>
+
+<p>Starting with a sine wave, adding the third harmonic begins to flatten the peaks. Adding the fifth, seventh, and subsequent odd harmonics makes the transitions progressively sharper, approaching the familiar square-wave shape.</p>
 
 <figure class="waveform-figure" id="building-a-square" aria-labelledby="square-build-caption"><div class="waveform-grid"><figure class="waveform-card"><figcaption>Start with the fundamental, f</figcaption><img src="../../assets/building-square-1.svg" alt="Square-wave approximation using odd harmonics through 1" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Add the third harmonic, 3f</figcaption><img src="../../assets/building-square-3.svg" alt="Square-wave approximation using odd harmonics through 3" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Add the fifth and seventh</figcaption><img src="../../assets/building-square-7.svg" alt="Square-wave approximation using odd harmonics through 7" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Continue through the 31st</figcaption><img src="../../assets/building-square-31.svg" alt="Square-wave approximation using odd harmonics through 31" width="300" height="130" loading="lazy"></figure></div><figcaption id="square-build-caption">Solid green shows the running sum; dashed brown shows the new components in the middle two panels. All panels use the same amplitude scale and the synth's 4/π normalization. Two cycles at 200 Hz, sampled at 24 kHz.</figcaption></figure>
 
-<p>Ava includes odd harmonics up to the 31st for square and triangle, and every harmonic up to the 31st for sawtooth. It also excludes any harmonic at or above half the sample rate, the Nyquist frequency. These are finite approximations: the small ripples in the square wave come from stopping the harmonic sum.</p>
+<p>In Ava, the square and triangle oscillators use odd harmonics up to the 31st, while the sawtooth uses all harmonics up to the 31st. We also exclude harmonics at or above the Nyquist frequency (half the sample rate) to reduce aliasing.</p>
 
-<p>The square-wave code evaluates the harmonics together. Below, <code>B</code> is the batch size, <code>N</code> is the number of audio samples, and <code>H = 16</code> is the number of odd harmonics from 1 to 31. Extra dimensions let PyTorch combine each frequency, harmonic and time without a Python loop:</p>
+<p>These are finite approximations, which explains the small ripples visible in the square wave.</p>
+
+<p>In PyTorch, we can calculate all the harmonics at once using broadcasting. For a batch of <span class="math">B</span> sounds, <span class="math">N</span> audio samples, and <span class="math">H</span> harmonics, we construct a tensor of shape <code>[B, H, N]</code>, then sum along the harmonic dimension.</p>
 
 <p class="code-source">From <code>synth/oscillators/square.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Odd harmonic numbers: 1, 3, ..., 31. Initially [H].</span>
@@ -250,21 +268,23 @@ waves <span class="code-operator">=</span> <span class="code-namespace">torch</s
 <span class="code-comment"># Mask, weight by 1/harmonic, then sum H to produce [B, N].</span>
 <span class="code-keyword">return</span> <span class="code-number">4</span> <span class="code-operator">/</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>pi <span class="code-operator">*</span> <span class="code-operator">(</span>allowed <span class="code-operator">*</span> waves <span class="code-operator">/</span> harmonics<span class="code-operator">)</span><span class="code-operator">.</span><span class="code-function">sum</span><span class="code-operator">(</span>dim<span class="code-operator">=</span><span class="code-number">1</span><span class="code-operator">)</span></code></pre>
 
-<p>Below are the four waveforms generated by Ava:</p>
+<p>Here are the four resulting waveforms generated by Ava:</p>
+
 <figure class="waveform-figure" aria-labelledby="waveforms-caption">
   <div class="waveform-grid"><figure class="waveform-card"><figcaption>Sine</figcaption><img src="../../assets/waveform-sine.svg" alt="Two cycles of the sine oscillator at 200 Hz" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Triangle</figcaption><img src="../../assets/waveform-triangle.svg" alt="Two cycles of the triangle oscillator at 200 Hz" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Square</figcaption><img src="../../assets/waveform-square.svg" alt="Two cycles of the square oscillator at 200 Hz" width="300" height="130" loading="lazy"></figure><figure class="waveform-card"><figcaption>Sawtooth</figcaption><img src="../../assets/waveform-sawtooth.svg" alt="Two cycles of the sawtooth oscillator at 200 Hz" width="300" height="130" loading="lazy"></figure></div><figcaption id="waveforms-caption">Two cycles at 200 Hz, rendered by the actual oscillator classes at 24 kHz. The non-sine waves use finite harmonic sums.</figcaption></figure>
 
-<p>So far, pitch has come from MIDI and phase has been fixed at zero. We have not yet introduced a learnable preset control. The first one we want to learn is <strong>which oscillator waveform to use</strong>.</p>
+<h4>Making waveform selection differentiable</h4>
 
-<p>Waveform selection is a discrete operation: each oscillator must choose one of four possible waveforms. Unfortunately, a hard selection, such as taking the <code>argmax</code> of a neural network&#x27;s output, is not differentiable.</p>
+<p>Now we can generate four waveforms, but how do we let a neural network choose between them?</p>
 
-<p>One solution is to replace the hard selection with a softmax-weighted combination of all four waveforms:</p>
+<p>Waveform selection is discrete: each oscillator must select one of four possibilities. A hard selection using <code>argmax</code> would prevent gradients from flowing back through the choice.</p>
 
-<div class="math display-math">x(t)=\sum_{k=1}^{4}p_k x_k(t),
-\qquad
-p_k=\operatorname{softmax}(z)_k</div>
+<p>Instead, we can use a softmax-weighted combination of the four waveforms:</p>
 
-<p>where <span class="math">z</span> represents the predicted logits and <span class="math">x_k(t)</span> the individual waveforms.</p>
+<div class="math display-math">x(t)=\sum_{k=1}^{4}p_kx_k(t),
+\qquad p_k=\operatorname{softmax}(z)_k</div>
+
+<p>where <span class="math">z</span> contains the predicted logits, <span class="math">p_k</span> the selection probabilities, and <span class="math">x_k(t)</span> the candidate waveforms.</p>
 
 <p class="code-source">From <code>synth/oscillators/bank.py</code></p>
 <pre><code class="language-python"><span class="code-comment"># Keep the four candidate waveforms on a separate axis: [batch, 4, samples].</span>
@@ -273,13 +293,11 @@ waves <span class="code-operator">=</span> <span class="code-namespace">torch</s
 <span class="code-comment"># Sum the waveform axis to return [batch, samples].</span>
 <span class="code-keyword">return</span> <span class="code-operator">(</span>selection<span class="code-operator">.</span><span class="code-function">unsqueeze</span><span class="code-operator">(</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">)</span> <span class="code-operator">*</span> waves<span class="code-operator">)</span><span class="code-operator">.</span><span class="code-function">sum</span><span class="code-operator">(</span>dim<span class="code-operator">=</span><span class="code-number">1</span><span class="code-operator">)</span></code></pre>
 
-<p>The bank's order is sine, square, sawtooth, triangle. Weights of <code>[1, 0, 0, 0]</code> therefore give a sine wave, while <code>[0.5, 0.5, 0, 0]</code> blend sine and square equally. This choice belongs to a single oscillator; the separate mix control later combines oscillator A with oscillator B.</p>
+<p>In the code, the order is sine, square, sawtooth, triangle. For example, weights of <code>[1, 0, 0, 0]</code> select a pure sine wave, while <code>[0.5, 0.5, 0, 0]</code> mix sine and square equally.</p>
 
-<p>This makes waveform selection differentiable, but introduces a mismatch: during training, the oscillator can mix multiple waveforms, whereas in the final plugin we want to select a single waveform.</p>
+<p>This makes selection differentiable, but introduces a mismatch: during training, the oscillator can blend several waveforms, while the final plugin uses a single discrete selection.</p>
 
-<p>An alternative is the <strong>straight-through estimator (STE)</strong>, which uses a hard selection during the forward pass but approximates its gradients with those of the soft selection.</p>
-
-<p>For one oscillator, the fitting code expresses this as:</p>
+<p>I also experimented with a <strong>straight-through estimator (STE)</strong>, which uses a hard selection during the forward pass but approximates its gradients using the softmax.</p>
 
 <pre><code class="language-python"><span class="code-comment"># Turn four logits into probabilities, then make a one-hot hard choice.</span>
 probability <span class="code-operator">=</span> raw<span class="code-operator">.</span><span class="code-function">softmax</span><span class="code-operator">(</span>dim<span class="code-operator">=</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">)</span>
@@ -287,17 +305,19 @@ hard <span class="code-operator">=</span> <span class="code-namespace">torch</sp
 <span class="code-comment"># The bracket is zero in the forward pass, but carries softmax gradients.</span>
 controls<span class="code-operator">[</span>name<span class="code-operator">]</span> <span class="code-operator">=</span> hard <span class="code-operator">+</span> <span class="code-operator">(</span>probability <span class="code-operator">-</span> probability<span class="code-operator">.</span><span class="code-function">detach</span><span class="code-operator">(</span><span class="code-operator">)</span><span class="code-operator">)</span></code></pre>
 
-<p>I experimented with both approaches, and found that soft selection was generally more stable, while the straight-through estimator made optimization considerably less reliable.</p>
+<p>While the STE better matches the behavior of the plugin, I found it considerably less stable during optimization. Soft selection generally worked better, so I kept it for training.</p>
 
-<h3 id="detuning-and-mixing">Detuning and mixing</h3>
+<h4 id="detuning-and-mixing">Detuning and mixing</h4>
 
-<p>Both oscillators begin with the MIDI note's frequency, but we can shift the second one slightly. Detuning is measured in <em>cents</em>: there are 100 cents in a semitone and 1,200 in an octave. Since moving up one octave doubles frequency, a shift of <span class="math">c</span> cents multiplies frequency by <span class="math">2^{c/1200}</span>:</p>
+<p>Both oscillators start from the MIDI note's frequency, but the second can be detuned slightly. Detuning is measured in cents, with 100 cents per semitone and 1,200 per octave.</p>
 
-<div class="math display-math">f_B = f_A\,2^{c/1200}</div>
+<p>A detuning of <span class="math">c</span> cents changes the frequency according to:</p>
 
-<p>When we mix two close frequencies, their interference creates slow beating and a sense of movement, without changing the MIDI note being played.</p>
+<div class="math display-math">f_B=f_A\,2^{c/1200}</div>
 
-<p>The code first renders oscillator B at its shifted frequency, then crossfades between A and B. A mix of zero uses only A, one uses only B, and 0.5 gives equal contributions:</p>
+<p>When two oscillators have slightly different frequencies, their interference creates a slow beating effect, making the sound feel richer and more animated.</p>
+
+<p>The oscillator mix parameter then crossfades between them: zero selects only oscillator A, one selects only B, and 0.5 gives equal contributions.</p>
 
 <p class="code-source">From <code>synth/synth.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Convert the cents offset to a frequency ratio for oscillator B.</span>
@@ -306,20 +326,20 @@ wave_b <span class="code-operator">=</span> <span class="code-namespace">self</s
 <span class="code-comment"># wave is oscillator A here; mix controls their relative contribution.</span>
 wave <span class="code-operator">=</span> <span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> mix<span class="code-operator">)</span> <span class="code-operator">*</span> wave <span class="code-operator">+</span> mix <span class="code-operator">*</span> wave_b</code></pre>
 
-<p>After mixing the oscillators, a separate noise mix blends in white noise before the filter.</p>
+<p>Finally, white noise can be mixed into the oscillator signal before filtering.</p>
 
 <h3 id="adsr-envelope">ADSR envelope</h3>
 
-<p>The oscillators give us a repeating waveform. An ADSR envelope gives the note its amplitude shape: attack raises the level from zero to one, decay lowers it toward sustain, sustain holds that level while the note is pressed, and release brings it back to zero after note-off. We multiply the audio by this envelope, sample by sample.</p>
+<p>So far, our oscillators generate continuous periodic signals. To turn these into musical notes, we need to control how their amplitude changes over time.</p>
+
+<p>This is the job of the <strong>ADSR envelope</strong>: attack raises the amplitude, decay lowers it toward the sustain level, and release brings it back to zero after note-off.</p>
 
 <figure id="envelope-figure" class="envelope-figure" aria-labelledby="envelope-caption">
   <figcaption id="envelope-caption"><strong>Shape the envelope</strong><span>The dashed line marks note-off. Try releasing the note before the attack or decay finishes.</span></figcaption>
   <svg id="envelope-plot" viewBox="0 0 640 210" role="img" aria-labelledby="envelope-plot-title"><title id="envelope-plot-title">ADSR amplitude over a six-second clip</title><g id="envelope-grid"><line x1="34" y1="176" x2="616" y2="176"/><text x="26" y="180" text-anchor="end">0</text><line x1="34" y1="96.0" x2="616" y2="96.0"/><text x="26" y="100.0" text-anchor="end">0.5</text><line x1="34" y1="16" x2="616" y2="16"/><text x="26" y="20" text-anchor="end">1</text><text x="34.0" y="198" text-anchor="middle">0</text><text x="131.0" y="198" text-anchor="middle">1</text><text x="228.0" y="198" text-anchor="middle">2</text><text x="325.0" y="198" text-anchor="middle">3</text><text x="422.0" y="198" text-anchor="middle">4</text><text x="519.0" y="198" text-anchor="middle">5</text><text x="616.0" y="198" text-anchor="middle">6 s</text></g><line id="envelope-note-off" y1="16" y2="176"/><path id="envelope-curve"/></svg>
   <div class="envelope-controls"><label for="envelope-attack"><span>Attack <output for="envelope-attack" id="value-attack">0.30s</output></span><input id="envelope-attack" name="attack" type="range" min="0.02" max="2" step="0.01" value="0.3" data-unit="s"></label><label for="envelope-decay"><span>Decay <output for="envelope-decay" id="value-decay">0.70s</output></span><input id="envelope-decay" name="decay" type="range" min="0.02" max="2" step="0.01" value="0.7" data-unit="s"></label><label for="envelope-sustain"><span>Sustain <output for="envelope-sustain" id="value-sustain">0.55</output></span><input id="envelope-sustain" name="sustain" type="range" min="0" max="1" step="0.01" value="0.55" data-unit=""></label><label for="envelope-release"><span>Release <output for="envelope-release" id="value-release">1.50s</output></span><input id="envelope-release" name="release" type="range" min="0.05" max="2" step="0.01" value="1.5" data-unit="s"></label><label for="envelope-hold"><span>Note-off <output for="envelope-hold" id="value-hold">4.00s</output></span><input id="envelope-hold" name="hold" type="range" min="0.1" max="4" step="0.01" value="4" data-unit="s"></label></div><noscript>Enable JavaScript to adjust the envelope.</noscript></figure>
 
-<p>Attack, decay and release are durations in seconds; sustain is a level between zero and one. MIDI timing supplies when the note starts and stops. We optimize the envelope controls, while keeping those MIDI events as known inputs.</p>
-
-<p>Given an attack duration in seconds, we need a function that rises from zero to one over that time. We use an exponential curve, stretched to match the attack duration:</p>
+<p>Ava uses exponential curves for these transitions. We first define a function that maps progress through a stage, from zero to one, into a curved transition:</p>
 
 <p class="code-source">From <code>synth/envelopes/adsr.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">curve</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> progress<span class="code-operator">)</span><span class="code-operator">:</span>
@@ -330,9 +350,9 @@ wave <span class="code-operator">=</span> <span class="code-operator">(</span><s
     <span class="code-comment"># Make completed transitions exactly 1, including in finite precision.</span>
     <span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">where</span><span class="code-operator">(</span>progress <span class="code-operator">&gt;=</span> <span class="code-number">1</span><span class="code-operator">,</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">ones_like</span><span class="code-operator">(</span>curve<span class="code-operator">)</span><span class="code-operator">,</span> curve<span class="code-operator">)</span></code></pre>
 
-<p>The fixed curvature of 4 determines the bend: halfway through the stage, this curve has reached about 88% of its endpoint.</p>
+<p>The curvature is fixed at 4, giving a relatively fast initial transition that gradually slows toward its endpoint. At halfway through the stage, the curve has already completed about 88% of the transition.</p>
 
-<p>We use the same curve to rise from zero to one over the attack time, then fall from one to the sustain level over the decay time:</p>
+<p>We use this same curve for both attack and decay, changing its duration and amplitude range. During attack, the level rises from zero to one. During decay, it falls from one toward the sustain level.</p>
 
 <p class="code-source">From <code>synth/envelopes/adsr.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-keyword">def</span> <span class="code-function">held_level</span><span class="code-operator">(</span><span class="code-namespace">self</span><span class="code-operator">,</span> time<span class="code-operator">,</span> attack<span class="code-operator">,</span> decay<span class="code-operator">,</span> sustain<span class="code-operator">)</span><span class="code-operator">:</span>
@@ -341,7 +361,9 @@ wave <span class="code-operator">=</span> <span class="code-operator">(</span><s
     decay_level <span class="code-operator">=</span> <span class="code-number">1</span> <span class="code-operator">-</span> <span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> sustain<span class="code-operator">)</span> <span class="code-operator">*</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">curve</span><span class="code-operator">(</span><span class="code-operator">(</span>time <span class="code-operator">-</span> attack<span class="code-operator">)</span> <span class="code-operator">/</span> decay<span class="code-operator">)</span>
     <span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">where</span><span class="code-operator">(</span>time <span class="code-operator">&lt;</span> attack<span class="code-operator">,</span> attack_level<span class="code-operator">,</span> decay_level<span class="code-operator">)</span></code></pre>
 
-<p>Release needs one more detail: the note might stop during attack or decay. We first evaluate the held-note envelope at the exact note-off time, then fade from <em>that level</em> to zero. This avoids jumping to the sustain level when the note is released early:</p>
+<p>Release requires a little more care. A note might end while the attack or decay is still in progress, so we can't assume that release always starts from the sustain level.</p>
+
+<p>Instead, we evaluate the envelope at the exact note-off time and fade from that value to zero.</p>
 
 <p class="code-source">From <code>synth/envelopes/adsr.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Amplitude while the key is held, evaluated at every audio sample.</span>
@@ -352,54 +374,56 @@ level_at_release <span class="code-operator">=</span> <span class="code-namespac
 tail <span class="code-operator">=</span> level_at_release <span class="code-operator">*</span> <span class="code-operator">(</span><span class="code-number">1</span> <span class="code-operator">-</span> <span class="code-namespace">self</span><span class="code-operator">.</span><span class="code-function">curve</span><span class="code-operator">(</span><span class="code-operator">(</span>time <span class="code-operator">-</span> note_press_duration<span class="code-operator">)</span> <span class="code-operator">/</span> release<span class="code-operator">)</span><span class="code-operator">)</span>
 <span class="code-keyword">return</span> <span class="code-namespace">torch</span><span class="code-operator">.</span><span class="code-function">where</span><span class="code-operator">(</span>time <span class="code-operator">&lt;</span> note_press_duration<span class="code-operator">,</span> held<span class="code-operator">,</span> tail<span class="code-operator">)</span></code></pre>
 
-<p>In these snippets, the controls have shape <code>[batch, 1]</code> and time has shape <code>[samples]</code>, producing an envelope of shape <code>[batch, samples]</code>. Clip duration is separate from note duration: rendering six seconds does not mean holding the key for six seconds, and a clip can end before a long release has finished.</p>
+<p>This avoids discontinuities when releasing notes early, while keeping the envelope differentiable with respect to its parameters.</p>
 
+<p>The MIDI input determines when the note starts and stops. The predicted envelope parameters determine how the amplitude evolves around those events.</p>
 
 <h3 id="low-pass-filter-and-lfo-modulation">Low-pass filter and LFO modulation</h3>
 
-<p>The filter was probably the most interesting (and hardest) component to implement.</p>
+<p>The filter was probably the most interesting, and challenging, component to implement.</p>
 
-<p>Ava uses a second-order resonant low-pass filter, also known as a <strong>biquad</strong>. A low-pass filter lets lower frequencies through and reduces higher ones. Its <em>cutoff</em>, measured in hertz, controls where it transitions between those two regions. Resonance, controlled by the value <span class="math">Q</span>, emphasizes the frequencies around the cutoff.</p>
+<p>Ava uses a second-order resonant low-pass filter, also called a <strong>biquad filter</strong>. It attenuates frequencies above a cutoff, while the resonance parameter <span class="math">Q</span> controls the emphasis around that cutoff.</p>
 
 <h4>A filter, one sample at a time</h4>
 
-<p>We already have an input waveform from the oscillators and noise. The filter turns it into a new waveform. To describe that process, we need a few symbols:</p>
+<p>Unlike the oscillators, a biquad filter is recursive: its output depends not only on the current and previous input samples, but also on previous output samples.</p>
 
-<ul>
-  <li><span class="math">n</span> is the <strong>sample index</strong>: 0, 1, 2, and so on. At 24 kHz, we advance by one sample every <span class="math">1/24000</span> seconds.</li>
-  <li><span class="math">x[n]</span> is the input audio amplitude at sample <span class="math">n</span>, before filtering.</li>
-  <li><span class="math">y[n]</span> is the output audio amplitude at that same sample, after filtering.</li>
-  <li><span class="math">b_0,b_1,b_2</span> are weights applied to the current input sample and its two predecessors.</li>
-  <li><span class="math">a_0</span> multiplies the current output; <span class="math">a_1,a_2</span> weight the two previous <em>output</em> samples.</li>
-</ul>
+<p>Let's call the input waveform <span class="math">x[n]</span> and the filtered waveform <span class="math">y[n]</span>, where <span class="math">n</span> identifies the audio sample.</p>
 
-<p>In particular, <span class="math">x[n-1]</span> means the input one sample ago, and <span class="math">y[n-2]</span> means the output two samples ago. The subscripts on <span class="math">a</span> and <span class="math">b</span> label the weights; the terms in square brackets pick a moment in the audio.</p>
-
-<p>The filter computes each output sample using this rule:</p>
+<p>The filter follows this equation:</p>
 
 <div class="math display-math">\begin{aligned}
-a_0 y[n] ={}&amp; b_0 x[n] + b_1 x[n-1] + b_2 x[n-2]\\
-       &amp;- a_1 y[n-1] - a_2 y[n-2]
+a_0y[n]={}&amp;b_0x[n]+b_1x[n-1]+b_2x[n-2]\\
+&amp;-a_1y[n-1]-a_2y[n-2]
 \end{aligned}</div>
 
-<p>Read the first line as “take a weighted combination of the current input and the two preceding inputs.” Then subtract the weighted previous outputs on the second line. The coefficients themselves can be positive or negative; the minus signs are part of the way this filter is written.</p>
+<p>The <span class="math">b_i</span> coefficients weight the current and previous input samples. The coefficients <span class="math">a_1</span> and <span class="math">a_2</span> weight previous outputs, while <span class="math">a_0</span> scales the current output.</p>
+
+<p>For example, <span class="math">x[n-1]</span> is the input one sample ago, while <span class="math">y[n-2]</span> is the filtered output two samples ago.</p>
+
+<p>The coefficients determine the filter's behavior and are calculated from the cutoff frequency and resonance.</p>
 
 <h4>Calculating and applying the filter</h4>
 
-<p>In Ava, the cutoff follows the played pitch to keep a similar effect across the keyboard. We express it as an octave offset from the note's frequency, then convert it to hertz before calculating the filter coefficients.</p>
+<p>In Ava, the cutoff follows the MIDI pitch, expressed as an octave offset from the note frequency. This helps preserve a similar filtering effect when playing different notes.</p>
 
-<p>With the LFO switched off, cutoff and Q stay fixed throughout the note, so we only need one set of coefficients. For cutoff <span class="math">f_c</span>, sample rate <span class="math">f_s</span> and resonance <span class="math">Q</span>, we first calculate:</p>
+<p>Given a cutoff frequency <span class="math">f_c</span>, sample rate <span class="math">f_s</span>, and resonance <span class="math">Q</span>, we first calculate:</p>
 
-<div class="math display-math">\omega=\frac{2\pi f_c}{f_s},\qquad \alpha=\frac{\sin\omega}{2Q}</div>
+<div class="math display-math">\omega=\frac{2\pi f_c}{f_s},
+\qquad
+\alpha=\frac{\sin\omega}{2Q}</div>
 
-<p>The low-pass coefficients are then:</p>
+<p>The low-pass filter coefficients are then:</p>
 
 <div class="math display-math">\begin{aligned}
-b_0=b_2&amp;=\frac{1-\cos\omega}{2}, &amp; b_1&amp;=1-\cos\omega\\
-a_0&amp;=1+\alpha, &amp; a_1&amp;=-2\cos\omega, &amp; a_2&amp;=1-\alpha
+b_0=b_2&amp;=\frac{1-\cos\omega}{2},
+&amp;b_1&amp;=1-\cos\omega\\
+a_0&amp;=1+\alpha,
+&amp;a_1&amp;=-2\cos\omega,
+&amp;a_2&amp;=1-\alpha
 \end{aligned}</div>
 
-<p>The code below evaluates these expressions:</p>
+<p>We normalize all coefficients by <span class="math">a_0</span>, so the recurrence can be written with <span class="math">a_0=1</span>.</p>
 
 <p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Convert cutoff Hz to radians per sample.</span>
@@ -412,7 +436,7 @@ b <span class="code-operator">=</span> <span class="code-namespace">torch</span>
 <span class="code-comment"># Divide every coefficient by a0, so the new a0 is 1.</span>
 <span class="code-keyword">return</span> a <span class="code-operator">/</span> a<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-number">1</span><span class="code-operator">]</span><span class="code-operator">,</span> b <span class="code-operator">/</span> a<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-number">1</span><span class="code-operator">]</span></code></pre>
 
-<p>We can then pass the audio and coefficients to <code>torchaudio.functional.lfilter</code>, which handles the previous-input and previous-output terms for us:</p>
+<p>When the cutoff and resonance remain constant, we only need to calculate these coefficients once. We can then apply the recursive filter using <code>torchaudio.functional.lfilter</code>.</p>
 
 <p class="code-source">From <code>synth/filters/lowpass.py</code>, with explanatory comments</p>
 <pre><code class="language-python"><span class="code-comment"># Compute one coefficient set per batch element from the fixed cutoff and Q.</span>
@@ -423,13 +447,28 @@ filtered <span class="code-operator">=</span> <span class="code-function">lfilte
                    clamp<span class="code-operator">=</span><span class="code-keyword">False</span><span class="code-operator">,</span> batching<span class="code-operator">=</span><span class="code-keyword">True</span><span class="code-operator">)</span>
 <span class="code-keyword">return</span> filtered<span class="code-operator">.</span><span class="code-function">to</span><span class="code-operator">(</span>audio<span class="code-operator">.</span>dtype<span class="code-operator">)</span></code></pre>
 
+<p>The interesting part is that PyTorch can still propagate gradients through the filtering operation, even though each output sample depends on previous outputs.</p>
+
 <h4>Adding LFO modulation</h4>
 
-<p>The LFO moves the cutoff up and down. Its rate controls how fast it moves, and its depth controls how far. Each time the cutoff changes, we calculate new <span class="math">a</span> and <span class="math">b</span> coefficients using the same formulas above.</p>
+<p>Now suppose we want the cutoff to move over time.</p>
 
-<p>We update those coefficients at <strong>200 Hz</strong>: every 5 milliseconds, or every 120 audio samples at 24 kHz. Between updates, the same coefficients remain in use while the filter continues producing audio at the full sample rate.</p>
+<p>An LFO (low-frequency oscillator) adds a periodic modulation to the cutoff. Its rate determines how quickly the cutoff changes, while its depth controls how far it moves.</p>
 
-<p>The following shows the operations for a single update. We start from the preset's base cutoff offset, add the LFO's contribution, convert to hertz and recalculate the coefficients. The full implementation evaluates the update times together in a batch.</p>
+<p>Since our cutoff is expressed in octaves relative to the MIDI pitch, we can write:</p>
+
+<div class="math display-math">f_c(t)=f_{\mathrm{MIDI}}\,
+2^{o_{\mathrm{cutoff}}+d\sin(2\pi rt)}</div>
+
+<p>where <span class="math">o_{\mathrm{cutoff}}</span> is the base cutoff offset, <span class="math">d</span> the modulation depth in octaves, and <span class="math">r</span> the LFO rate.</p>
+
+<p>This means the filter coefficients are no longer constant: they need to change as the LFO moves the cutoff.</p>
+
+<p>The Python synth defaults to coefficient updates at 200 Hz, once every 5 milliseconds. At 24 kHz, that corresponds to one update every 120 samples. The rate is configurable: for the datasets and audio-training experiments in this post, I used sample-wise updates at 24 kHz, as does the C++ plugin.</p>
+
+<p>Between updates, the filter continues processing audio at the full sample rate using the current coefficients.</p>
+
+<p>At each update, we calculate the modulated cutoff and convert it into a new set of filter coefficients:</p>
 
 <p class="code-source">Simplified from <code>synth/synth.py</code> and <code>synth/filters/lowpass.py</code>; batching omitted</p>
 <pre><code class="language-python"><span class="code-comment"># For one update time; the full implementation batches all update times.</span>
@@ -440,21 +479,37 @@ cutoff_hz <span class="code-operator">=</span> freq<span class="code-operator">.
 <span class="code-comment"># Recalculate a and b using exactly the same coefficient function as before.</span>
 a<span class="code-operator">,</span> b <span class="code-operator">=</span> <span class="code-namespace">self</span><span class="code-operator">.</span>lowpass<span class="code-operator">.</span><span class="code-function">coefficients</span><span class="code-operator">(</span>cutoff_hz<span class="code-operator">,</span> q<span class="code-operator">)</span></code></pre>
 
+<p><code>torchaudio.functional.lfilter</code> expects fixed coefficients for each signal. For the changing cutoff, Ava first expands each coefficient set over the samples where it applies. It computes the input-weighted part with vectorized PyTorch operations, then uses <a href="https://github.com/DiffAPF/torchlpc">TorchLPC</a>'s <code>sample_wise_lpc</code> for the recursive part:</p>
+
+<p class="code-source">From <code>synth/filters/lowpass.py</code>, with the numerator split across lines</p>
+<pre><code class="language-python"><span class="code-comment"># a and b contain one coefficient set per sample: [batch, samples, 3].</span>
+padded <span class="code-operator">=</span> <span class="code-namespace">torch</span><span class="code-operator">.</span>nn<span class="code-operator">.</span>functional<span class="code-operator">.</span><span class="code-function">pad</span><span class="code-operator">(</span>x<span class="code-operator">,</span> <span class="code-operator">(</span><span class="code-number">2</span><span class="code-operator">,</span> <span class="code-number">0</span><span class="code-operator">)</span><span class="code-operator">)</span>
+numerator <span class="code-operator">=</span> <span class="code-operator">(</span>b<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">0</span><span class="code-operator">]</span> <span class="code-operator">*</span> x
+             <span class="code-operator">+</span> b<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">]</span> <span class="code-operator">*</span> padded<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">:</span><span class="code-operator">-</span><span class="code-number">1</span><span class="code-operator">]</span>
+             <span class="code-operator">+</span> b<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">2</span><span class="code-operator">]</span> <span class="code-operator">*</span> padded<span class="code-operator">[</span><span class="code-operator">:</span><span class="code-operator">,</span> <span class="code-operator">:</span><span class="code-operator">-</span><span class="code-number">2</span><span class="code-operator">]</span><span class="code-operator">)</span>
+filtered <span class="code-operator">=</span> <span class="code-function">sample_wise_lpc</span><span class="code-operator">(</span>
+    numerator<span class="code-operator">.</span><span class="code-function">contiguous</span><span class="code-operator">(</span><span class="code-operator">)</span><span class="code-operator">,</span> a<span class="code-operator">[</span><span class="code-operator">...</span><span class="code-operator">,</span> <span class="code-number">1</span><span class="code-operator">:</span><span class="code-operator">]</span><span class="code-operator">.</span><span class="code-function">contiguous</span><span class="code-operator">(</span><span class="code-operator">)</span><span class="code-operator">)</span></code></pre>
+
+<p>This is one filtering pass over the whole clip, so the filter's history continues across coefficient updates rather than restarting at each one.</p>
+
+<p>The important part is that the complete process remains differentiable, allowing gradients to flow back through the filter coefficients to the cutoff, resonance, LFO rate, and depth.</p>
+
 <h3 id="drive-gain-and-putting-everything-together">Drive, gain, and putting everything together</h3>
 
-<p>Drive adds soft distortion, reshaping the waveform and adding harmonics. For a drive amount <span class="math">d&gt;0</span>, an input sample <span class="math">x</span> becomes:</p>
+<p>The final components are relatively simple.</p>
 
-<div class="math display-math">y=\frac{\tanh(d\cdot x)}{\tanh(d)}</div>
+<p>Drive adds harmonic distortion using a normalized <code>tanh</code> nonlinearity:</p>
 
-<p>At zero drive, the audio is unchanged. Drive comes before the ADSR envelope; preset gain and MIDI velocity set the final output level.</p>
+<div class="math display-math">y=\frac{\tanh(dx)}{\tanh(d)}</div>
 
-<p>With all the components in place, the complete synthesizer is simply a sequence of operations transforming the MIDI input and preset parameters into an audio waveform.</p>
+<p>where <span class="math">d</span> is the drive amount. At zero drive, the signal passes through unchanged.</p>
 
-<p>The nice thing is that, from PyTorch&#x27;s perspective, the entire synthesizer behaves much like any other differentiable function. We can compute a loss on its output and use automatic differentiation to obtain gradients with respect to its input parameters.</p>
+<p>The ADSR envelope then shapes the amplitude, while output gain and MIDI velocity control the final level.</p>
 
-<p>Of course, <strong>being differentiable doesn&#x27;t necessarily mean that the parameters are easy to optimize</strong>. Different parameter combinations can produce very similar sounds, and the loss landscape can contain local minima. Even if gradients exist, they might not always point us toward the parameters we actually want.</p>
+<p>With everything connected, our synthesizer is just a differentiable function mapping MIDI information and preset parameters to audio. We can render a sound, compute a loss, and backpropagate through the entire signal chain.</p>
 
-<p>So, before training any neural networks, the next question was: can we actually recover the synthesizer parameters by optimizing them directly?</p>
+<p>Of course, <strong>being differentiable doesn't guarantee that the parameters are easy to optimize</strong>. Different parameter combinations can produce similar sounds, and the loss landscape may contain local minima. That's what I wanted to investigate next.</p>
+
           </div>
         </details>
         </div>
