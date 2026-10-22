@@ -28,7 +28,6 @@
   <main id="main" class="article">
     <article aria-labelledby="article-heading">
       <header class="article-header">
-        <p class="eyebrow">Work in progress</p>
         <h1 id="article-heading">Ava: Turning Text into Synth Presets</h1>
         <p class="article-subtitle">Building a differentiable synthesizer and teaching a neural network to control it.</p>
         <p class="article-byline">By Gianluigi Silvestri</p>
@@ -52,7 +51,7 @@
             <p class="sound-prompt">“a warm lo-fi piano with a soft muted touch, gently swelling.”</p>
             <div class="sound-player"><p>Generated reference</p><audio controls preload="metadata" src="../../assets/ava-gallery/033-reference.wav" aria-label="Quick listen, Lo-fi piano: Generated reference">Your browser does not support audio playback.</audio></div>
             <div class="sound-player"><p>Ava</p><audio controls preload="metadata" src="../../assets/ava-gallery/033-ava.wav" aria-label="Quick listen, Lo-fi piano: Ava">Your browser does not support audio playback.</audio></div>
-            <details class="full-prompt"><summary>Full prompt</summary><p>A single isolated bass-inspired subtractive synthesizer note at D♯5 (MIDI 45, 110.00 Hz). Desired timbre: a warm lo-fi piano with a soft muted touch, gently swelling. Dry and monophonic, triggered once, within a 6-second clip.</p></details>
+            <details class="full-prompt"><summary>Full prompt</summary><p>A single isolated piano-inspired subtractive synthesizer note at D#5 (MIDI 75, 622.25 Hz). Desired timbre: a warm lo-fi piano with a soft muted touch, gently swelling. Dry and monophonic, triggered once, within a 6-second clip.</p></details>
           </div>
           <div class="sound-card" data-example-id="001">
             <div class="sound-card-heading"><h3>Concert flute</h3><span class="note-badge">G♯4</span></div>
@@ -502,7 +501,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
 <div class="math display-math">y=\frac{\tanh(dx)}{\tanh(d)}</div>
 
-<p>where <span class="math">d</span> is the drive amount. At zero drive, the signal passes through unchanged.</p>
+<p>where <span class="math">d</span> is the drive amount. The zero-drive case is handled separately as <span class="math">y=x</span>, which is also the limit as <span class="math">d</span> approaches zero.</p>
 
 <p>The ADSR envelope then shapes the amplitude, while output gain and MIDI velocity control the final level.</p>
 
@@ -532,8 +531,6 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>Waveform MSE is generally not a great measure of perceptual similarity. It's particularly sensitive to phase: two signals can sound almost identical but have a large MSE if their waveforms are slightly misaligned.</p>
 
-        <p>For example, consider two sine waves with the same frequency and amplitude, but a 90-degree phase difference:</p>
-
         <figure class="phase-example" id="phase-mse-example" aria-labelledby="phase-caption">
           <img src="../../assets/phase-mse.svg" width="740" height="260" loading="lazy" alt="Two sine waves of amplitude 0.5 at 1 kHz, with a 90-degree phase difference corresponding to six samples at 24 kHz.">
           <div class="phase-audio">
@@ -548,8 +545,6 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
           </div>
           <figcaption id="phase-caption">Same pitch and level, different phase: at 1 kHz, six samples at 24 kHz correspond to a 90° offset. The waveform MSE is about <strong>0.25</strong>, although the tones should sound the same when played separately.</figcaption>
         </figure>
-
-        <p>At 1 kHz and 24 kHz sample rate, this corresponds to a shift of just six samples. The waveform MSE is about 0.25, even though the two tones should sound identical when played separately.</p>
 
         <p>This experiment is a little different, though. Both sounds come from the same deterministic synthesizer, with identical MIDI inputs, oscillator starting phases, and noise realization. A parameter configuration producing exactly the same waveform therefore exists.</p>
 
@@ -643,8 +638,6 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
           <p class="data-targets">Original preset → 13 continuous targets + two waveform labels</p>
           <figcaption id="data-pipeline-caption">The latents become the network input; the preset supplies the supervision. MIDI is saved for rendering and target conversion, but isn't an additional network input.</figcaption>
         </figure>
-
-        <p>The audio latents become the input to the prediction network, while the original preset parameters provide the supervision. MIDI information is stored for rendering, but isn't passed to the network.</p>
 
         <p>I ran this entire stage, from data generation to supervised training, on my MacBook M1 Pro.</p>
 
@@ -796,14 +789,10 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
 
         <p>The window size introduces a trade-off: short windows capture transients more precisely, while longer windows provide better frequency resolution, which is particularly useful for distinguishing nearby frequencies. A <strong>multi-resolution STFT loss</strong> combines both.</p>
 
-        <p>The figure below illustrates this using a square wave and a copy shifted by a quarter-cycle.</p>
-
         <figure class="pretraining-errors" id="spectral-representations" aria-labelledby="spectral-representations-caption">
           <img src="../../assets/square-spectral-loss.svg" width="740" height="800" loading="lazy" alt="A 500 Hz band-limited square wave and a quarter-cycle-shifted copy. Waveform samples differ, but their harmonic patterns remain similar in 128-sample and 2,048-sample STFTs and a 32-band log-mel spectrogram. Each row includes the measured distance to the reference.">
-          <figcaption id="spectral-representations-caption">The same 500 Hz square wave, shifted by 90°. Waveforms are zoomed in; spectrograms show one second. Each spectral row uses a shared color scale. The distances use different scales and aren't directly comparable; finite windows and clip boundaries keep the spectral losses from being exactly phase-invariant.</figcaption>
+          <figcaption id="spectral-representations-caption">The same 500 Hz square wave, shifted by 90°. The waveforms differ, but their harmonic patterns stay similar in the spectral views, particularly with longer windows. Waveforms are zoomed in; spectrograms show one second. Each spectral row uses a shared color scale. The distances use different scales and aren't directly comparable; finite windows and clip boundaries keep the spectral losses from being exactly phase-invariant.</figcaption>
         </figure>
-
-        <p>The waveforms differ substantially, even though their harmonic structure is the same. The spectral representations show much more similar harmonic patterns, particularly with longer windows. The losses aren't completely phase-invariant because of finite windows and clip boundaries.</p>
 
         <p>For training, I used <a href="https://github.com/csteinmetz1/auraloss">auraloss</a><sup><a href="#ref-auraloss" aria-label="Reference 5: auraloss">[5]</a></sup>, which combines two measures: <em>spectral convergence</em>, measuring the relative difference between magnitude spectrograms, and the L1 distance between their log magnitudes.</p>
 
@@ -988,6 +977,7 @@ filtered <span class="code-operator">=</span> <span class="code-function">sample
         <p>Enough about training and losses. Let's finally hear what Ava can do!</p>
 
         <p>Pick an instrument below to compare the audio generated from a text description with Ava's attempt to recreate it. All reconstructions in the main gallery use the best model trained from scratch.</p>
+        <p>Click <strong>Try this preset</strong> to load the selected sound into the <a href="#browser-synth">interactive synth below</a>.</p>
 
         <div id="instrument-tabs" class="instrument-tabs" role="group" aria-label="Choose an instrument family"></div>
         <p id="gallery-loading" role="status">Loading the sounds…</p>
